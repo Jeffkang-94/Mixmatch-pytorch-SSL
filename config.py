@@ -48,4 +48,4 @@ def parse_args():
     parser.add_argument('--cudnn_deter', action='store_false', help='default is True. If True, use deterministic functions as much as possible')
     parser.add_argument('--cudnn_bench', action='store_true', help='default is False. If True, program may run faster')
     
-    return parser
+    return parser.parse_args()

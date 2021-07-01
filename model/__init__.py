@@ -1,1 +1,1 @@
-from .wideresnet import WideResNet
+from .wideresnet import *
