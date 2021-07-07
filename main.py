@@ -11,7 +11,6 @@ from tensorboardX import SummaryWriter
 from utils import *
 from tqdm import tqdm
 import data_loader.transform as T
-from data_loader.cifar10 import get_cifar10
 
 def train_one_epoch(epoch,
                     model,
@@ -19,76 +18,45 @@ def train_one_epoch(epoch,
                     optim,
                     lr_schdlr,
                     ema,
-                    dltrain_x,
-                    dltrain_u,
-                    lambda_u,
+                    train_loader,
                     n_iters,
-                    alpha,
-                    T,
                     n_class
                     ):
 
     model.train()
     epoch_start = time.time()  # start time
-    dl_x, dl_u = iter(dltrain_x), iter(dltrain_u)
+    #dl_x, dl_u = iter(dltrain_x), iter(dltrain_u)
+    
     loss_meter = AverageMeter()
     loss_x_meter = AverageMeter()
     loss_u_meter = AverageMeter()
 
     tq = tqdm(range(n_iters), total = n_iters, leave=True)
     for it in tq:
-        ims_x, _,targets_x = next(dl_x)
-        ims_u1, ims_u2, _ = next(dl_u)
+        try:
+            x = train_loader.next()
+        except:
+            train_loader = iter(train_loader)
+            img, u_img, target = train_loader.next()
+        u_x1, u_x2 = u_img[0], u_img[1]
+        print(img.shape, u_x1.shape, u_x2.shape)
+       
+        x, u_x_1, u_x_2, y = x.to(device), u_x_1.to(device), u_x_2.to(device), y.to(device)
 
-        bt = ims_x.size(0)
+        bt = x.size(0)
 
         # Transform label to one-hot
-        targets_x = torch.zeros(bt, n_class).scatter_(1, targets_x.view(-1,1).long(), 1)
+        y = torch.zeros(bt, n_class).scatter_(1, y.view(-1,1).long(), 1)
 
-        ims_x, targets_x = ims_x.cuda(), targets_x.cuda()
-        ims_u1, ims_u2 = ims_u1.cuda(), ims_u2.cuda()
+        current = epoch + it / 1024
+        input = {'model'    : model, 
+                 'u_x_1'    : u_x_1, 
+                 'u_x_2'    : u_x_2, 
+                 'x'        : x, 
+                 'y'        : y,
+                 'current'  : current}
 
-        with torch.no_grad():
-            # compute guessed labels of unlabel samples
-            outputs_u1, _ = model(ims_u1)
-            outputs_u2, _ = model(ims_u2)
-            p = (torch.softmax(outputs_u1, dim=1) + torch.softmax(outputs_u2, dim=1)) / 2
-            pt = p**(1/T)
-            targets_u = pt / pt.sum(dim=1, keepdim=True)
-            targets_u = targets_u.detach()
-
-        # mixup
-        #print(targets_x.shape, targets_u.shape, targets_u.shape)
-        all_inputs = torch.cat([ims_x, ims_u1, ims_u2], dim=0)
-        all_targets = torch.cat([targets_x, targets_u, targets_u], dim=0)
-
-        lamda = np.random.beta(alpha, alpha)
-        lamda = max(lamda, 1-lamda)
-
-        newidx = torch.randperm(all_inputs.size(0))
-
-        input_a, input_b = all_inputs, all_inputs[newidx]
-        target_a, target_b = all_targets, all_targets[newidx]
-
-        mixed_input = lamda * input_a + (1 - lamda) * input_b
-        mixed_target = lamda * target_a + (1 - lamda) * target_b
-
-        # interleave labeled and unlabed samples between batches to get correct batchnorm calculation
-        mixed_input = list(torch.split(mixed_input, bt))
-        mixed_input = mixmatch_interleave(mixed_input, bt)
-
-        logit, _ = model(mixed_input[0])
-        logits = [logit]
-        for input in mixed_input[1:]:
-            logit, _ = model(input)
-            logits.append(logit)
-
-         # put interleaved samples back
-        logits = mixmatch_interleave(logits, bt)
-        logits_x = logits[0]
-        logits_u = torch.cat(logits[1:], dim=0)
-
-        loss_x, loss_u, w = criterion(logits_x, mixed_target[:bt], logits_u, mixed_target[bt:], epoch+it/n_iters, lambda_u)
+        loss_x, loss_u, w = criterion(input)
 
         loss = loss_x + w * loss_u
         
@@ -136,7 +104,7 @@ def evaluate(epoch, model, dataloader, criterion):
             top1_meter.update(top1.item())
             top5_meter.update(top5.item())
 
-    tq.set_description("Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
+            tq.set_description("[NON] Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
 
     return top1_meter.avg, top5_meter.avg, loss_meter.avg
 
@@ -159,14 +127,19 @@ def evaluate_ema(epoch, ema, dataloader, criterion):
             loss = criterion(logits, lbs)
             scores = torch.softmax(logits, dim=1)
             top1, top5 = accuracy(scores, lbs, (1, 5))
+            loss_meter.update(loss.item())
+            top1_meter.update(top1.item())
+            top5_meter.update(top5.item())
+            tq.set_description("[EMA] Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
     # note roll back model current params to continue training
     ema.restore()
 
-    tq.set_description("Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
+    
     return top1_meter.avg, top5_meter.avg, loss_meter.avg
   
 def main():
     args = parse_args()
+    global configs
     configs = get_configs(args)
     global device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -179,18 +152,11 @@ def main():
     out_dir = os.path.join(result_dir, "trial")
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    #else:
-   #     print('Error: the folder name is dupplicated!')
-     #   return
-    
-    #args.n_iters_per_epoch = args.k_imgs // args.batchsize  
-    #args.n_iters_all = args.n_iters_per_epoch * args.epochs  
-    #args.n_classes, args.num_val = 10, 5000
  
     model = WRN(num_classes=configs.num_label, depth=configs.depth, width=configs.width).to(device)
-    
-    criterion = MixMatchLoss()
-    dltrain_x, dltrain_u, dlval = get_data(configs)
+    criterion = MixMatchLoss(configs.alpha, configs.lambda_u, configs.T, configs.K)
+
+    train_loader, val_loader = get_data(configs)
 
     ema = EMA(model, configs.ema_alpha)
 
@@ -225,12 +191,8 @@ def main():
         optim=optim,
         lr_schdlr=lr_schdlr,
         ema=ema,
-        dltrain_x=dltrain_x,
-        dltrain_u=dltrain_u,
-        lambda_u=configs.lambda_u,
+        train_loader=train_loader,
         n_iters=1024,
-        alpha=configs.alpha,
-        T=configs.T,
         n_class=configs.num_label
     )
 

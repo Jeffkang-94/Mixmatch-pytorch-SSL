@@ -34,12 +34,11 @@ def get_data(args):
         from data_loader.stl10 import get_train_loader_mixmatch
     elif args.dataset == 'TinyImageNet':
         from data_loader.tiny_imagenet import get_train_loader_mixmatch
+    train_loader, val_loader = get_train_loader_mixmatch(
+        args.dataset, args.K, args.batch_size, 1024, args.num_label, args.datapath)
 
-    dltrain_x, dltrain_u, dlval = get_train_loader_mixmatch(
-        args.dataset, args.batch_size, 1, 1024, L=args.num_label, num_val=args.num_val)
-
-    return dltrain_x, dltrain_u, dlval
-
+    return train_loader, val_loader
+    
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)

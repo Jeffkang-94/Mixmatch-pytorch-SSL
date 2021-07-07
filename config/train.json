@@ -2,6 +2,7 @@
     "mode": "train",
     "name": "Mixmatch",
     "dataset": "CIFAR10",
+    "datapath":"./data",
     "depth":28,
     "width":2,
     "num_label":250,
@@ -11,10 +12,11 @@
     "save_epoch":1, 
     "resume": false,
 
-    "lr":0.03,
+    "lr":3e-2,
     "lambda_u": 75,
     "alpha":0.75,
     "T" : 0.5,
+    "K" : 2,
     "ema_alpha":0.999,
     "weight_decay":5e-4,
     "seed":3114
