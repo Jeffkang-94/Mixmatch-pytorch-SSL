@@ -6,10 +6,11 @@ import numpy as np
 
 import torch
 from torch.utils.data import Dataset
-from datasets import transform as T
+from data_loader import transform as T
 
-from datasets.randaugment import RandomAugment
-from datasets.sampler import RandomSampler, BatchSampler
+from data_loader.randaugment import RandomAugment
+from torch.utils.data import RandomSampler, BatchSampler
+#from data_loader.sampler import RandomSampler, BatchSampler
 
 logger = logging.getLogger(__name__)
 
@@ -191,8 +192,6 @@ class CifarMixMatch(Dataset):
 def get_train_loader(dataset, batch_size, mu, n_iters_per_epoch, L, num_val, root='data'):
     data_x, label_x, data_u, label_u, data_val, label_val = load_data_train(L=L, num_val=num_val, dataset=dataset, dspth=root)
 
-    logger.info('labeled dataset: {}. unlabeled dataset: {}. validation dataset: {}.'.format(len(data_x), len(data_u), len(data_val)))
-
     ds_x = Cifar(
         dataset=dataset,
         data=data_x,
@@ -267,8 +266,6 @@ def get_test_loader(dataset, batch_size, num_workers, pin_memory=True):
 
 def get_train_loader_mixmatch(dataset, batch_size, mu, n_iters_per_epoch, L, num_val, root='data'):
     data_x, label_x, data_u, label_u, data_val, label_val = load_data_train(L=L, num_val=num_val, dataset=dataset, dspth=root)
-
-    logger.info('labeled dataset: {}. unlabeled dataset: {}. validation dataset: {}.'.format(len(data_x), len(data_u), len(data_val)))
 
     ds_x = CifarMixMatch(
         dataset=dataset,

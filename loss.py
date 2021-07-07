@@ -1,8 +1,9 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 def linear_rampup(current):
-    rampup_length = num_epochs
+    rampup_length = 1024
     if rampup_length == 0:
         return 1.0
     else:

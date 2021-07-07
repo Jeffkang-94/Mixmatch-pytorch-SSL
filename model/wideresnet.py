@@ -68,6 +68,7 @@ class WRN(nn.Module):
         self.bn = nn.BatchNorm2d(widths[2], affine=False)
         self.register_parameter('conv_last', init_weight(num_classes, widths[2], 1, 1))
         self.bn_last = nn.BatchNorm2d(num_classes)
+        self.relu_last = nn.ReLU(True)
 
 
     def _make_block(self, width, n, downsample=False):
@@ -84,9 +85,11 @@ class WRN(nn.Module):
         h = self.group0(h)
         h = self.group1(h)
         h = self.group2(h)
+        h_ = self.bn(h)
+
         h = F.relu(self.bn(h))
         h = F.conv2d(h, self.conv_last)
         h = self.bn_last(h)
         out = F.avg_pool2d(h, kernel_size=h.shape[-2:]).view(h.shape[0], -1)
-        return out
+        return out, self.relu_last(h_)
    

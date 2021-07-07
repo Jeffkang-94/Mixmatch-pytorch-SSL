@@ -2,11 +2,16 @@ import os
 import time
 import shutil
 import random
+import torch
 import numpy as np
-from model import WRN
+from model import *
 from loss import MixMatchLoss
-from config import parse_args
+from config import *
 from tensorboardX import SummaryWriter
+from utils import *
+from tqdm import tqdm
+import data_loader.transform as T
+from data_loader.cifar10 import get_cifar10
 
 def train_one_epoch(epoch,
                     model,
@@ -18,22 +23,21 @@ def train_one_epoch(epoch,
                     dltrain_u,
                     lambda_u,
                     n_iters,
-                    log_interval,
                     alpha,
                     T,
                     n_class
                     ):
 
     model.train()
-
+    epoch_start = time.time()  # start time
+    dl_x, dl_u = iter(dltrain_x), iter(dltrain_u)
     loss_meter = AverageMeter()
     loss_x_meter = AverageMeter()
     loss_u_meter = AverageMeter()
 
-    epoch_start = time.time()  # start time
-    dl_x, dl_u = iter(dltrain_x), iter(dltrain_u)
-    for it in range(n_iters):
-        ims_x, _, targets_x = next(dl_x)
+    tq = tqdm(range(n_iters), total = n_iters, leave=True)
+    for it in tq:
+        ims_x, _,targets_x = next(dl_x)
         ims_u1, ims_u2, _ = next(dl_u)
 
         bt = ims_x.size(0)
@@ -54,6 +58,7 @@ def train_one_epoch(epoch,
             targets_u = targets_u.detach()
 
         # mixup
+        #print(targets_x.shape, targets_u.shape, targets_u.shape)
         all_inputs = torch.cat([ims_x, ims_u1, ims_u2], dim=0)
         all_targets = torch.cat([targets_x, targets_u, targets_u], dim=0)
 
@@ -86,7 +91,7 @@ def train_one_epoch(epoch,
         loss_x, loss_u, w = criterion(logits_x, mixed_target[:bt], logits_u, mixed_target[bt:], epoch+it/n_iters, lambda_u)
 
         loss = loss_x + w * loss_u
-
+        
         optim.zero_grad()
         loss.backward()
         optim.step()
@@ -96,6 +101,15 @@ def train_one_epoch(epoch,
         loss_meter.update(loss.item())
         loss_x_meter.update(loss_x.item())
         loss_u_meter.update(loss_u.item())
+        t = time.time() - epoch_start
+        tq.set_description("Epoch:{}, iter: {}. loss: {:.4f}. loss_x: {:.4f}. loss_u: {:.4f}. lambda_u: {:.4f}. Time: {:.2f}".format(
+                epoch, it + 1, 
+                loss_meter.avg, 
+                loss_x_meter.avg, 
+                loss_u_meter.avg,
+                w, 
+                t))
+        epoch_start = time.time()
 
     ema.update_buffer()
 
@@ -108,9 +122,10 @@ def evaluate(epoch, model, dataloader, criterion):
     loss_meter = AverageMeter()
     top1_meter = AverageMeter()
     top5_meter = AverageMeter()
-
+    tq = tqdm(dataloader, total=len(dataloader), leave=True)
     with torch.no_grad():
-        for ims, lbs in dataloader:
+        #for ims, lbs in dataloader:
+        for ims, lbs in tq:
             ims = ims.cuda()
             lbs = lbs.cuda()
             logits, _ = model(ims)
@@ -121,6 +136,7 @@ def evaluate(epoch, model, dataloader, criterion):
             top1_meter.update(top1.item())
             top5_meter.update(top5.item())
 
+    tq.set_description("Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
 
     return top1_meter.avg, top5_meter.avg, loss_meter.avg
 
@@ -129,65 +145,67 @@ def evaluate_ema(epoch, ema, dataloader, criterion):
     ema.apply_shadow()
     ema.model.eval()
     ema.model.cuda()
-
     loss_meter = AverageMeter()
     top1_meter = AverageMeter()
     top5_meter = AverageMeter()
 
+    tq = tqdm(dataloader, total=len(dataloader), leave=True)
     with torch.no_grad():
-        for ims, lbs in dataloader:
+       # for ims, lbs in dataloader:
+       for ims, lbs in tq:
             ims = ims.cuda()
             lbs = lbs.cuda()
             logits, _ = ema.model(ims)
             loss = criterion(logits, lbs)
             scores = torch.softmax(logits, dim=1)
             top1, top5 = accuracy(scores, lbs, (1, 5))
-            loss_meter.update(loss.item())
-            top1_meter.update(top1.item())
-            top5_meter.update(top5.item())
-
     # note roll back model current params to continue training
     ema.restore()
 
-
+    tq.set_description("Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
     return top1_meter.avg, top5_meter.avg, loss_meter.avg
   
 def main():
     args = parse_args()
-
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_ids
+    configs = get_configs(args)
+    global device
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # Create folder for training and copy important files
-    if not os.path.exists(args.run_dir):
-        os.makedirs(args.run_dir)
+    result_dir = os.path.join("results", configs.name) # "results/MixMatch"
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
     time_str = time.strftime('%Y-%m-%d-%H-%M')
+    out_dir = os.path.join(result_dir, "trial")
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    #else:
+   #     print('Error: the folder name is dupplicated!')
+     #   return
     
-    
-    args.n_iters_per_epoch = args.k_imgs // args.batchsize  
-    args.n_iters_all = args.n_iters_per_epoch * args.epochs  
-    args.n_classes, args.num_val = 10, 5000
+    #args.n_iters_per_epoch = args.k_imgs // args.batchsize  
+    #args.n_iters_all = args.n_iters_per_epoch * args.epochs  
+    #args.n_classes, args.num_val = 10, 5000
  
-    model = WRN(num_classes=10, depth=28, width=2)
+    model = WRN(num_classes=configs.num_label, depth=configs.depth, width=configs.width).to(device)
     
     criterion = MixMatchLoss()
+    dltrain_x, dltrain_u, dlval = get_data(configs)
 
-    dltrain_x, dltrain_u, dlval = get_data(args)
-
-    ema = EMA(model, args.ema_alpha)
+    ema = EMA(model, configs.ema_alpha)
 
     wd_params, non_wd_params = [], []
     for name, param in model.named_parameters():
-        # if len(param.size()) == 1:
         if 'bn' in name:
             non_wd_params.append(param)  # bn.weight, bn.bias and classifier.bias
             # print(name)
         else:
             wd_params.append(param)
-    param_list = [
-        {'params': wd_params}, {'params': non_wd_params, 'weight_decay': 0}]
-    optim = torch.optim.SGD(param_list, lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum, nesterov=True)
+    #param_list = [
+    #    {'params': wd_params}, {'params': non_wd_params, 'weight_decay': 0}]
+    optim = torch.optim.SGD(model.parameters(), lr=configs.lr, weight_decay=configs.weight_decay, momentum=0.9, nesterov=True)
     lr_schdlr = WarmupCosineLrScheduler(
-        optim, max_iter=args.n_iters_all, warmup_iter=args.warmup
+        optim, max_iter=1024*configs.epochs, warmup_iter=0
     )
 
     best_acc_val = -1
@@ -209,25 +227,24 @@ def main():
         ema=ema,
         dltrain_x=dltrain_x,
         dltrain_u=dltrain_u,
-        lambda_u=args.lam_u,
-        n_iters=args.n_iters_per_epoch,
-        log_interval=args.log_interval,
-        alpha=args.alpha,
-        T=args.T,
-        n_class=args.n_classes
+        lambda_u=configs.lambda_u,
+        n_iters=1024,
+        alpha=configs.alpha,
+        T=configs.T,
+        n_class=configs.num_label
     )
 
-    global num_epochs
-    num_epochs = args.epochs
+    #global num_epochs
+    num_epochs = configs.epochs
+    start_epoch = 0 
+    criterion = nn.CrossEntropyLoss().to(device)
 
-    for epoch in range(args.start_epoch, args.epochs):
+
+    for epoch in range(start_epoch, configs.epochs):
         train_loss, loss_x, loss_u = train_one_epoch(epoch, **train_args)
-        # torch.cuda.empty_cache()
 
-        top1_val, top5_val, valid_loss_val = evaluate(epoch, model, dlval, nn.CrossEntropyLoss().cuda())
-
-        top1_ema_val, top5_ema_val, valid_loss_ema_val = evaluate_ema(epoch, ema, dlval, nn.CrossEntropyLoss().cuda())
-
+        top1_val, top5_val, valid_loss_val = evaluate(epoch, model, dlval, criterion)
+        top1_ema_val, top5_ema_val, valid_loss_ema_val = evaluate_ema(epoch, ema, dlval, criterion)
 
         is_best_val = best_acc_val < top1_val
         if is_best_val:
@@ -250,22 +267,12 @@ def main():
             'best_top1_ema_val': best_acc_ema_val,
             'best_epoch_ema_val': best_epoch_ema_val,
             'optimizer': optim.state_dict(),
-        },
-        os.path.join(args.out_dir, args.name + '_checkpoint'))
+        }, os.path.join(result_dir + '_checkpoint'))
 
-        if is_best_val:
-            
-            torch.save(model.state_dict(), os.path.join(args.out_dir, args.name + '_bestval'))
-
-        if is_best_ema_val:
-            
-            torch.save(ema.shadow, os.path.join(args.out_dir, args.name + '_ema_bestval')) # not ema.model.state_dict()
-
-        
-
-        if (epoch + 1) % args.save_epoch == 0:
-            torch.save(model.state_dict(), os.path.join(args.out_dir, args.name + '_e{}'.format(epoch)))
-            torch.save(ema.shadow, os.path.join(args.out_dir, args.name + '_ema_e{}'.format(epoch)))    # not ema.model.state_dict()
+      
+        if (epoch + 1) % configs.save_epoch == 0:
+            torch.save(model.state_dict(), os.path.join(out_dir, configs.name + '_e{}'.format(epoch)))
+            torch.save(ema.shadow, os.path.join(out_dir, configs.name + '_ema_e{}'.format(epoch)))    # not ema.model.state_dict()
 
 if __name__ == '__main__':
     main()
