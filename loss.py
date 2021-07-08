@@ -37,7 +37,8 @@ class MixMatchLoss(nn.Module):
     def forward(self, input):
         x = input['x']
         y = input['y']
-        y = torch.nn.functional.one_hot(y, self.num_classes)
+        bt = x.size(0)
+        y = torch.zeros(bt, self.num_classes).scatter_(1, y.view(-1,1).long(), 1)
         
         u_x = [x for x in input['u_x']]
         current = input['current']
@@ -45,12 +46,11 @@ class MixMatchLoss(nn.Module):
         
         x,y  = x.to(self.device), y.to(self.device)
         u_x = [i.to(self.device) for i in u_x]
-        bt = x.size(0)
+        
         with torch.no_grad():
             y_hat = sum([model(x)[0].softmax(1) for x in u_x]) / self.K
             y_hat = self.sharpen(y_hat)
             y_hat = y_hat.detach()
-
         # mixup
         all_inputs = torch.cat([x]+u_x, dim=0)
         all_targets = torch.cat([y] +[y_hat]*self.K, dim=0)

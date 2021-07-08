@@ -96,6 +96,7 @@ def evaluate(epoch, model, dataloader, criterion, device, ema=False):
             top1_meter.update(top1.item())
             top5_meter.update(top5.item())
             tq.set_description("Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
+    logger.info("  [{}] Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format("EMA" if ema else "NON", epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
     model.restore() if ema else None
 
     return top1_meter.avg, top5_meter.avg, loss_meter.avg
@@ -107,6 +108,7 @@ def main():
     np.random.seed
     torch.manual_seed(configs.seed)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    global logger
     logger, writer, out_dir = create_logger(configs)
     
     model = WRN(num_classes=configs.num_classes, 
@@ -165,7 +167,7 @@ def main():
         n_iters=1024
     )
 
-
+    logger.info(f"  Start trainng")
     for epoch in range(start_epoch, configs.epochs):
         train_loss, loss_x, loss_u = train_one_epoch(epoch, **train_args)
         top1_val, top5_val, valid_loss_val = evaluate(epoch,  model, val_loader, CE_loss, device)

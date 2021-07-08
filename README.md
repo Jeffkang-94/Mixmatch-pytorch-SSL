@@ -1,9 +1,10 @@
 # PyTorch-MixMatch - A Holistic Approach to Semi-Supervised Learning
 
-:warning: Unofficial reproduced code for **[MixMatch](https://arxiv.org/pdf/1905.02249.pdf)** by PyTorch.
+:warning: Unofficial reproduced code for **[MixMatch](https://arxiv.org/pdf/1905.02249.pdf)**.
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
 
 - [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
+- [ ] Applying log softmax on unlabeled data and compare the results
 - [ ] Evaluation code
 - [ ] Supporting other datasets
 - [ ] Upload Pre-trained model and Experimental results
@@ -54,11 +55,12 @@ This is an example configuration for CIFAR-10 dataset.
     "datapath":"./data",    # datapath
     "depth":28,             # ResNet depth
     "width":2,              # ResNet width
+    "large":false,          # flag of using large model(i.e., 135 filter size)
     "num_classes":10,       # Number of class, e.g., CIFAR-10 : 10
     "num_label":250,        # The number of available label [250, 1000, 4000]
     "batch_size":64,        # batch size
-    "epochs":1024,          # epoch
-    "save_epoch":1,         # interval of saving checkpoint
+    "epochs":256,           # epoch
+    "save_epoch":10,        # interval of saving checkpoint
     "resume": false,        # resuming the training
 
     /* Training Configuration */
@@ -68,8 +70,8 @@ This is an example configuration for CIFAR-10 dataset.
     "T" : 0.5,              # fixed across all experiments, but you can adjust it
     "K" : 2,                # fixed across all experiments, but you can adjust it
     "ema_alpha":0.999,
-    "weight_decay":0.0004,
-    "seed":3114
+    "weight_decay":0.0008,
+    "seed":3114             # Different seed yields different result
 }
 ```
 
@@ -95,17 +97,36 @@ Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 **CIFAR-10** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
 #Paper | 88.92±0.87	| 90.35±0.94 | 92.25±0.32 | 92.97±0.15 | 93.76±0.06 | 
-**#This repo** | 0 | 0 | 0 | 0 | 0  | 0 | 
+**Repo #Shallow** | 0 | 0 | 0 | 0 | 0  | 0 | 
+**Repo #Large** | 0 | 0 | 0 | 0 | 0  | 0 | 
 
 **SVHN** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
 #Paper | 96.22±0.87	| 96.36±0.94 | 96.73±0.32 | 96.96±0.15 | 97.11±0.06 | 
-**#This repo** | 0 | 0 | 0 | 0 | 0  | 0 | 
+**Repo #Shallow** | 0 | 0 | 0 | 0 | 0  | 0 | 
+**Repo #Large** | 0 | 0 | 0 | 0 | 0  | 0 | 
 
 ### Training log
 
+We provide a board to monitor log values.
+Follow the below commands to view the progress.
+
+```bash
+cd results/${name}
+tensorboard --logdir=log/ --bind_all
+```
 
 ## Reference
 
 YU1ut [MixMatch-pytorch](https://github.com/YU1ut/MixMatch-pytorch)
 perrying [realistic-ssl-evaluation-pytorch](https://github.com/perrying/realistic-ssl-evaluation-pytorch)
+google-research [mixmatch](https://github.com/google-research/mixmatch)
+
+```
+@article{berthelot2019mixmatch,
+  title={MixMatch: A Holistic Approach to Semi-Supervised Learning},
+  author={Berthelot, David and Carlini, Nicholas and Goodfellow, Ian and Papernot, Nicolas and Oliver, Avital and Raffel, Colin},
+  journal={arXiv preprint arXiv:1905.02249},
+  year={2019}
+}
+```

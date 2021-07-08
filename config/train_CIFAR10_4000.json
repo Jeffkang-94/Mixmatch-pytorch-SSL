@@ -5,7 +5,7 @@
     "datapath":"./data",
     "depth":28,
     "width":2,
-    "large":true, 
+    "large":false, 
     "num_classes":10,
     "num_label":4000,
     "batch_size":64,
