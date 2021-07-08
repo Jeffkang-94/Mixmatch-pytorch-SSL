@@ -104,3 +104,8 @@ Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
 ### Training log
 
+
+## Reference
+
+YU1ut [MixMatch-pytorch](https://github.com/YU1ut/MixMatch-pytorch)
+perrying [realistic-ssl-evaluation-pytorch](https://github.com/perrying/realistic-ssl-evaluation-pytorch)

@@ -37,7 +37,7 @@ def train_one_epoch(epoch,
             train_loader = iter(train_loader)
             x, u_x, y, _ = train_loader.next()
         
-        current = epoch + it / 1024
+        current = epoch + it / n_iters
         input = {'model'    : model, 
                  'u_x'    : u_x, 
                  'x'        : x, 
@@ -104,10 +104,16 @@ def main():
     args = parse_args()
     configs = get_configs(args)
     random.seed(configs.seed)
+    np.random.seed
     torch.manual_seed(configs.seed)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    writer, out_dir = logger(configs)
-    model = WRN(num_classes=configs.num_classes, depth=configs.depth, width=configs.width).to(device)
+    logger, writer, out_dir = create_logger(configs)
+    
+    model = WRN(num_classes=configs.num_classes, 
+                depth=configs.depth, 
+                width=configs.width,
+                large=configs.large).to(device)
+
     criterion = MixMatchLoss(configs.alpha, 
                     configs.lambda_u, 
                     configs.T,
@@ -117,10 +123,22 @@ def main():
 
     train_loader, val_loader = get_data(configs)
     ema_model = EMA(model, configs.ema_alpha)
-    optim = torch.optim.SGD(model.parameters(), lr=configs.lr, weight_decay=configs.weight_decay, momentum=0.9, nesterov=True)
+
+    wd_params, non_wd_params = [], []
+    for name, param in model.named_parameters():
+        if 'bn' in name:
+            non_wd_params.append(param)  # bn.weight, bn.bias and classifier.bias
+        else:
+            wd_params.append(param)
+    param_list = [
+        {'params': wd_params}, {'params': non_wd_params, 'weight_decay': 0}]
+
+    optim = torch.optim.SGD(param_list, lr=configs.lr, weight_decay=configs.weight_decay, momentum=0.9, nesterov=True)
     lr_schdlr = WarmupCosineLrScheduler(
         optim, max_iter=1024*configs.epochs, warmup_iter=0
     )
+    logger.info("  Total params: {:.2f}M".format(
+        sum(p.numel() for p in model.parameters()) / 1e6))
 
     best_acc_val = -1
     best_epoch_val = 0
@@ -184,7 +202,7 @@ def main():
 
         torch.save({
             'epoch': epoch+1,
-            'state_dict': model.state_dict(),
+            'model': model.state_dict(),
             'ema_state_dict': ema_model.shadow,   # not ema.model.state_dict()
             'top1_val': top1_val,
             'best_top1_val': best_acc_val,
@@ -193,7 +211,7 @@ def main():
             'best_top1_ema_val': best_acc_ema_val,
             'best_epoch_ema_val': best_epoch_ema_val,
             'optimizer': optim.state_dict(),
-        }, os.path.join(out_dir + '_checkpoint'))
+        }, os.path.join(out_dir + '_checkpoint.pth'))
 
       
         if (epoch + 1) % configs.save_epoch == 0:

@@ -17,12 +17,10 @@ def load_data_train(L=250, dataset='CIFAR10', dspth='./data'):
             for i in range(5)
         ]
         n_class = 10
-        assert L in [40, 250, 4000], "The number of labels should be 40, 250, or 4000"
     elif dataset == 'CIFAR100':
         datalist = [
             osp.join(dspth, 'cifar-100-python', 'train')]
         n_class = 100
-        assert L in [400, 2500, 10000], "The number of labels should be 400, 2500, or 10000"
 
     data, labels = [], []
     for data_batch in datalist:
@@ -51,7 +49,7 @@ def load_data_train(L=250, dataset='CIFAR10', dspth='./data'):
         ]
         label_u += [labels[i] for i in inds_u]
 
-    print(len(label_x), len(label_u))
+    print("label set : {}, unlabel set : {}".format(len(label_x), len(label_u)))
     return {'x': data_x, 'y': label_x, 'u_x': data_u, 'u_y': label_u}# 'v_x': data_val, 'v_y': label_val}
 
 
@@ -99,15 +97,15 @@ class CifarMixMatch(Dataset):
             mean, std = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
         if self.isTrain:
             self.trans_train = T.Compose([
-                T.Resize((32, 32)),
-                T.PadandRandomCrop(border=4, cropsize=(32, 32)),
+                #T.Resize((32, 32)),
+                T.PadandRandomCrop(cropsize=(32, 32)),
                 T.RandomHorizontalFlip(p=0.5),
                 T.Normalize(mean, std),
                 T.ToTensor(),
             ])
         else:
             self.trans = T.Compose([
-                T.Resize((32, 32)),
+                #T.Resize((32, 32)),
                 T.Normalize(mean, std),
                 T.ToTensor(),
             ])
@@ -121,13 +119,11 @@ class CifarMixMatch(Dataset):
             u_x_ = []
             for _ in range(self.K):
                 u_x_.append(self.trans_train(self.data['u_x'][u_idx]))
-            img = x
-            u_img = u_x_
             u_y = [u_y] *self.K
-            return img, u_img, y, u_y
+            return x, u_x_, y, u_y
         else:
-            img, target = self.trans(self.data['x'][idx]) , self.data['y'][idx]
-            return img, target
+            img, y = self.trans(self.data['x'][idx]) , self.data['y'][idx]
+            return img, y
 
     def __len__(self):
         leng = len(self.data['x'])
@@ -160,7 +156,7 @@ def get_train_loader_mixmatch(dataset, K, batch_size, n_iters_per_epoch, L, root
     dl_test = torch.utils.data.DataLoader(
         ds_test,
         shuffle=False,
-        batch_size=100,
+        batch_size=batch_size,
         drop_last=False,
         num_workers=2,
         pin_memory=True

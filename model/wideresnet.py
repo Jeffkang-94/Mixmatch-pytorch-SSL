@@ -44,9 +44,12 @@ class NetworkBlock(nn.Module):
         return self.layer(x)
 
 class WRN(nn.Module):
-    def __init__(self, num_classes, depth=28, width=2, dropRate=0.0):
+    def __init__(self, num_classes, depth=28, width=2, dropRate=0.0, large=False):
         super(WRN, self).__init__()
-        nChannels = [16, 16*width, 32*width, 64*width]
+        if large:
+            nChannels = [16, 135, 135*width, 270*width]
+        else:
+            nChannels = [16, 16*width, 32*width, 64*width]
         assert((depth - 4) % 6 == 0)
         n = (depth - 4) / 6
         block = BasicBlock

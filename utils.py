@@ -1,8 +1,35 @@
 import logging
-import os
+import os,sys
 import shutil
 import torch
 from tensorboardX import SummaryWriter
+
+
+class ConfigMapper(object):
+    def __init__(self, args):
+        for key in args:
+            self.__dict__[key] = args[key]
+
+class AverageMeter(object):
+    """
+    Computes and stores the average and current value
+
+    """
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 def mixmatch_interleave_offsets(batch, nu):
     groups = [batch // (nu + 1)] * (nu + 1)
@@ -55,8 +82,7 @@ def accuracy(output, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
-def logger(configs):
-    # Create folder for training and copy important files
+def create_logger(configs):
     result_dir = os.path.join("results", configs.name) # "results/MixMatch"
     os.makedirs(result_dir, exist_ok=True)
     out_dir = os.path.join(result_dir, str(configs.dataset) + '_' + str(configs.depth) + '-' +str(configs.width) + '_' + str(configs.num_label))
@@ -64,64 +90,8 @@ def logger(configs):
     log_dir = os.path.join(result_dir, "log")
     os.makedirs(log_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=log_dir)
-    return writer, out_dir
 
-
-class ConfigMapper(object):
-    def __init__(self, args):
-        for key in args:
-            self.__dict__[key] = args[key]
-
-class AverageMeter(object):
-    """
-    Computes and stores the average and current value
-
-    """
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-
-def time_str(fmt=None):
-    if fmt is None:
-        fmt = '%Y-%m-%d_%H:%M:%S'
-
-    return datetime.today().strftime(fmt)
-
-
-def create_logger(out_dir, name, time_str):
-
-    shutil.copy2(
-        os.path.basename(__file__),
-        out_dir)
-    for f in os.listdir('.'):
-        if f.endswith('.py'):
-            shutil.copy2(
-                f,
-                out_dir + '/src')
-    folders = ['datasets', 'models']
-    for folder in folders:
-        if not os.path.exists(out_dir + '/src/{}'.format(folder)):
-            os.makedirs(out_dir + '/src/{}'.format(folder))
-        for f in os.listdir(folder):
-            if f.endswith('.py'):
-                shutil.copy2(
-                    '{}/'.format(folder) + f,
-                    out_dir + '/src/{}'.format(folder))
-
-    log_file = '{}_{}.log'.format(name, time_str)
+    log_file = '{}.log'.format(configs.name)
     final_log_file = os.path.join(out_dir, log_file)
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(filename=str(final_log_file),
@@ -133,4 +103,15 @@ def create_logger(out_dir, name, time_str):
     console_handler.setFormatter(logging.Formatter(head))
     logger.addHandler(console_handler)
 
-    return logger
+    logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
+    logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
+    logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
+    logger.info(f"  large model = {configs.large}")
+    logger.info(f"  Batch size  = {configs.batch_size}")
+    logger.info(f"  Epoch       = {configs.epochs}")
+    logger.info(f"  lambda_u    = {configs.lambda_u}")
+    logger.info(f"  alpha       = {configs.alpha}")
+    logger.info(f"  T           = {configs.T}")
+    logger.info(f"  K           = {configs.K}")
+
+    return logger, writer, out_dir

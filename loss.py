@@ -15,19 +15,12 @@ class MixMatchLoss(nn.Module):
         self.num_classes = num_classes
         self.device = device
 
-    def label2onehot(self, labels, dim):
-        """Convert label indices to one-hot vectors."""
-        batch_size = labels.size(0)
-        out = torch.zeros(batch_size, dim)
-        out[np.arange(batch_size), labels.long()] = 1
-        return out
-
     def sharpen(self, y):
         y = y.pow(1/self.T)
         return y / y.sum(1,keepdim=True)
 
     def linear_rampup(self, current):
-        rampup_length = 1024
+        rampup_length = 256
         if rampup_length == 0:
             return 1.0
         else:
@@ -36,7 +29,7 @@ class MixMatchLoss(nn.Module):
 
     def cal_loss(self, logit_x, y, logit_u_x, y_hat, epoch, lambda_u):
         probs_u = torch.softmax(logit_u_x, dim=1)
-        loss_x = F.cross_entropy(logit_x, y)
+        loss_x =  -torch.mean(torch.sum(F.log_softmax(logit_x, dim=1) * y, dim=1))
         loss_u_x = F.mse_loss(probs_u, y_hat)
 
         return loss_x, loss_u_x, lambda_u * self.linear_rampup(epoch)  
@@ -44,21 +37,23 @@ class MixMatchLoss(nn.Module):
     def forward(self, input):
         x = input['x']
         y = input['y']
+        y = torch.nn.functional.one_hot(y, self.num_classes)
+        
         u_x = [x for x in input['u_x']]
         current = input['current']
         model = input['model']
-        onehot_y = self.label2onehot(y, self.num_classes)
-        x,y, onehot_y  = x.to(self.device), y.to(self.device), onehot_y.to(self.device)
+        
+        x,y  = x.to(self.device), y.to(self.device)
         u_x = [i.to(self.device) for i in u_x]
         bt = x.size(0)
         with torch.no_grad():
-            y_hat = sum([model(x)[0].log_softmax(1) for x in u_x]) / self.K
+            y_hat = sum([model(x)[0].softmax(1) for x in u_x]) / self.K
             y_hat = self.sharpen(y_hat)
             y_hat = y_hat.detach()
 
         # mixup
         all_inputs = torch.cat([x]+u_x, dim=0)
-        all_targets = torch.cat([onehot_y] +[y_hat]*self.K, dim=0)
+        all_targets = torch.cat([y] +[y_hat]*self.K, dim=0)
 
         lam = self.lamda.sample().item()
         lam = max(lam, 1-lam)
@@ -79,7 +74,7 @@ class MixMatchLoss(nn.Module):
         logits = mixmatch_interleave(logits, bt)
         logits_x = logits[0]
         logits_u = torch.cat(logits[1:], dim=0)
-        loss_x, loss_u, w = self.cal_loss(logits_x, y, logits_u, mixed_target[bt:], current, self.lambda_u)
+        loss_x, loss_u, w = self.cal_loss(logits_x, mixed_target[:bt], logits_u, mixed_target[bt:], current, self.lambda_u)
         return loss_x, loss_u, w 
 
         
