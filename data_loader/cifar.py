@@ -128,8 +128,8 @@ class CifarMixMatch(Dataset):
                 u_x_.append(self.trans_train(self.data['u_x'][u_idx]))
             img = x
             u_img = u_x_
-            target = [y] + [u_y] * self.K
-            return img, u_img, target
+            u_y = [u_y] *self.K
+            return img, u_img, y, u_y
         else:
             img, target = self.trans(self.data['x'][idx]) , self.data['y'][idx]
             return img, target

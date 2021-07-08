@@ -34,24 +34,22 @@ def train_one_epoch(epoch,
     tq = tqdm(range(n_iters), total = n_iters, leave=True)
     for it in tq:
         try:
-            x = train_loader.next()
+            x, u_x, y, _ = train_loader.next()
         except:
             train_loader = iter(train_loader)
-            img, u_img, target = train_loader.next()
-        u_x1, u_x2 = u_img[0], u_img[1]
-        print(img.shape, u_x1.shape, u_x2.shape)
-       
-        x, u_x_1, u_x_2, y = x.to(device), u_x_1.to(device), u_x_2.to(device), y.to(device)
+            x, u_x, y, _ = train_loader.next()
+        
 
         bt = x.size(0)
 
         # Transform label to one-hot
-        y = torch.zeros(bt, n_class).scatter_(1, y.view(-1,1).long(), 1)
+        #y = torch.zeros(bt, n_class).scatter_(1, y.view(-1,1).long(), 1)
+        
+        
 
         current = epoch + it / 1024
         input = {'model'    : model, 
-                 'u_x_1'    : u_x_1, 
-                 'u_x_2'    : u_x_2, 
+                 'u_x'    : u_x, 
                  'x'        : x, 
                  'y'        : y,
                  'current'  : current}
@@ -153,8 +151,8 @@ def main():
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
  
-    model = WRN(num_classes=configs.num_label, depth=configs.depth, width=configs.width).to(device)
-    criterion = MixMatchLoss(configs.alpha, configs.lambda_u, configs.T, configs.K)
+    model = WRN(num_classes=configs.num_classes, depth=configs.depth, width=configs.width).to(device)
+    criterion = MixMatchLoss(configs.alpha, configs.lambda_u, configs.T, configs.K, configs.num_classes,device)
 
     train_loader, val_loader = get_data(configs)
 
@@ -193,7 +191,7 @@ def main():
         ema=ema,
         train_loader=train_loader,
         n_iters=1024,
-        n_class=configs.num_label
+        n_class=configs.num_classes
     )
 
     #global num_epochs
