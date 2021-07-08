@@ -147,6 +147,7 @@ def main():
         n_iters=1024
     )
 
+
     for epoch in range(start_epoch, configs.epochs):
         train_loss, loss_x, loss_u = train_one_epoch(epoch, **train_args)
         top1_val, top5_val, valid_loss_val = evaluate(epoch,  model, val_loader, CE_loss, device)
