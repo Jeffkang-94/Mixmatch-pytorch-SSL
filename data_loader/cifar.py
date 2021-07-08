@@ -50,11 +50,7 @@ def load_data_train(L=250, dataset='CIFAR10', dspth='./data'):
             for i in inds_u
         ]
         label_u += [labels[i] for i in inds_u]
-        # data_val += [
-        #     data[i].reshape(3, 32, 32).transpose(1, 2, 0)   # Transpose to (32, 32, 3) to use cv2 library. T.Tensor will re-transpose it back to (3, 32, 32)
-        #     for i in inds_val
-        # ]
-        # label_val += [labels[i] for i in inds_val]
+
     print(len(label_x), len(label_u))
     return {'x': data_x, 'y': label_x, 'u_x': data_u, 'u_y': label_u}# 'v_x': data_val, 'v_y': label_val}
 

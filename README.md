@@ -1,9 +1,13 @@
 # PyTorch-MixMatch - A Holistic Approach to Semi-Supervised Learning
 
-Unofficial reproduced code for **[MixMatch](https://arxiv.org/pdf/1905.02249.pdf)** by PyTorch.
+:warning: Unofficial reproduced code for **[MixMatch](https://arxiv.org/pdf/1905.02249.pdf)** by PyTorch.
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
-[*2021-07-08*] CIFAR-10 dataset supported. 
 
+- [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
+- [ ] Evaluation code
+- [ ] Supporting other datasets
+- [ ] Upload Pre-trained model and Experimental results
+- [ ] Trouble shooting
 
 ## :hammer: Setup
 
@@ -26,7 +30,12 @@ You have to specify the datapath using symbolic link or directly download the co
 ```
 
 
-## Training
+## :rainbow: Training
+To train MixMatch model, just follow the below command with a configuration file.
+
+```bash
+python main.py --cfg_path configs/${config_name}
+```
 
 Training configurations are located under `config` folder. You can tune the each parameter.
 MixMatch has 4 primary parameter: `lambda_u, alpha, T` and ` K`. (See 3.5 section of [MixMatch](https://arxiv.org/pdf/1905.02249.pdf))
@@ -69,13 +78,29 @@ This is an example configuration for CIFAR-10 dataset.
  - `T`        : Temperature parameter for sharpening used in MixMatch
  - `K`        : Number of augmentations used when guessing labels in MixMatch
 
-## Pre-training model
+### Example
+
+Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
+
+> python main.py --cfg_path config/train_CIFAR10_250.json
+
+## :gift: Pre-training model
 
 /* not supported yet */
 
-## Experiments
+## :link: Experiments
 
-250 label / 500 labe / 1000 label / 2000 label / 5000 label
+### Table
+
+**CIFAR-10** | 250  | 500 | 1000 | 2000 | 4000 |
+| :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
+#Paper | 88.92±0.87	| 90.35±0.94 | 92.25±0.32 | 92.97±0.15 | 93.76±0.06 | 
+**#This repo** | 0 | 0 | 0 | 0 | 0  | 0 | 
+
+**SVHN** | 250  | 500 | 1000 | 2000 | 4000 |
+| :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
+#Paper | 96.22±0.87	| 96.36±0.94 | 96.73±0.32 | 96.96±0.15 | 97.11±0.06 | 
+**#This repo** | 0 | 0 | 0 | 0 | 0  | 0 | 
 
 ### Training log
 
