@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import torch
+from tensorboardX import SummaryWriter
 
 def mixmatch_interleave_offsets(batch, nu):
     groups = [batch // (nu + 1)] * (nu + 1)
@@ -22,20 +23,20 @@ def mixmatch_interleave(xy, batch):
         xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
     return [torch.cat(v, dim=0) for v in xy]
     
-def get_data(args):
+def get_data(configs):
 
-    assert args.dataset in ['CIFAR10', 'CIFAR100', 'SVHN', 'STL10', 'TinyImageNet']
+    assert configs.dataset in ['CIFAR10', 'CIFAR100', 'SVHN', 'STL10', 'TinyImageNet']
 
-    if args.dataset == 'CIFAR10' or args.dataset == 'CIFAR100':
+    if configs.dataset == 'CIFAR10' or configs.dataset == 'CIFAR100':
         from data_loader.cifar import get_train_loader_mixmatch
-    elif args.dataset == 'SVHN':
+    elif configs.dataset == 'SVHN':
         from data_loader.svhn import get_train_loader_mixmatch
-    elif args.dataset == 'STL10':
+    elif configs.dataset == 'STL10':
         from data_loader.stl10 import get_train_loader_mixmatch
-    elif args.dataset == 'TinyImageNet':
+    elif configs.dataset == 'TinyImageNet':
         from data_loader.tiny_imagenet import get_train_loader_mixmatch
     train_loader, val_loader = get_train_loader_mixmatch(
-        args.dataset, args.K, args.batch_size, 1024, args.num_label, args.datapath)
+        configs.dataset, configs.K, configs.batch_size, 1024, configs.num_label, configs.datapath)
 
     return train_loader, val_loader
     
@@ -53,7 +54,19 @@ def accuracy(output, target, topk=(1,)):
         correct_k = correct[:k].contiguous().view(-1).float().sum(0)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
-    
+
+def logger(configs):
+    # Create folder for training and copy important files
+    result_dir = os.path.join("results", configs.name) # "results/MixMatch"
+    os.makedirs(result_dir, exist_ok=True)
+    out_dir = os.path.join(result_dir, str(configs.dataset) + '_' + str(configs.depth) + '-' +str(configs.width) + '_' + str(configs.num_label))
+    os.makedirs(out_dir, exist_ok=True)
+    log_dir = os.path.join(result_dir, "log")
+    os.makedirs(log_dir, exist_ok=True)
+    writer = SummaryWriter(log_dir=log_dir)
+    return writer, out_dir
+
+
 class ConfigMapper(object):
     def __init__(self, args):
         for key in args:

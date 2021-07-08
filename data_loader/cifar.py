@@ -117,9 +117,8 @@ class CifarMixMatch(Dataset):
             ])
 
     def __getitem__(self, idx):
-        u_idx = random.randint(0, len(self.data['u_x'])-1)
-        
         if self.isTrain:
+            u_idx = random.randint(0, len(self.data['u_x'])-1)
             x   ,  y = self.data['x'][idx], self.data['y'][idx]
             u_x, u_y = self.data['u_x'][u_idx], self.data['u_y'][u_idx]
             x = self.trans_train(x)

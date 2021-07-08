@@ -20,7 +20,6 @@ class EMA(object):
             self.shadow[name].copy_(
                 decay * self.shadow[name] + (1 - decay) * state[name]
             )
-
         self.step += 1
 
     def update_buffer(self):
