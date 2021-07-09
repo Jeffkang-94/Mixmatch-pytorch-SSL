@@ -1,6 +1,6 @@
 {
     "mode": "train",
-    "name": "Mixmatch_250_Adam",
+    "name": "Mixmatch_250_ADAM",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
@@ -9,11 +9,11 @@
     "num_classes":10,
     "num_label":250,
     "batch_size":64,
-    "epochs":256,
+    "epochs":1024,
     "save_epoch":10, 
     "resume": false,
 
-    "lr":2e-3,
+    "lr":0.002,
     "lambda_u": 75,
     "alpha":0.75,
     "T" : 0.5,

@@ -105,7 +105,7 @@ class CifarMixMatch(Dataset):
             ])
         else:
             self.trans = T.Compose([
-                T.Resize((32, 32)),
+                #T.Resize((32, 32)),
                 T.Normalize(mean, std),
                 T.ToTensor(),
             ])

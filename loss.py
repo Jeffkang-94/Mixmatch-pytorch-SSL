@@ -20,7 +20,7 @@ class MixMatchLoss(nn.Module):
         return y / y.sum(1,keepdim=True)
 
     def linear_rampup(self, current):
-        rampup_length = 256
+        rampup_length = 1024
         if rampup_length == 0:
             return 1.0
         else:
