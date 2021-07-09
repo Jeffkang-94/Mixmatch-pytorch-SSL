@@ -1,9 +1,7 @@
 import logging
 import os,sys
-import shutil
 import torch
 from tensorboardX import SummaryWriter
-
 
 class ConfigMapper(object):
     def __init__(self, args):
@@ -50,23 +48,6 @@ def mixmatch_interleave(xy, batch):
         xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
     return [torch.cat(v, dim=0) for v in xy]
     
-def get_data(configs):
-
-    assert configs.dataset in ['CIFAR10', 'CIFAR100', 'SVHN', 'STL10', 'TinyImageNet']
-
-    if configs.dataset == 'CIFAR10' or configs.dataset == 'CIFAR100':
-        from data_loader.cifar import get_train_loader_mixmatch
-    elif configs.dataset == 'SVHN':
-        from data_loader.svhn import get_train_loader_mixmatch
-    elif configs.dataset == 'STL10':
-        from data_loader.stl10 import get_train_loader_mixmatch
-    elif configs.dataset == 'TinyImageNet':
-        from data_loader.tiny_imagenet import get_train_loader_mixmatch
-    train_loader, val_loader = get_train_loader_mixmatch(
-        configs.dataset, configs.K, configs.batch_size, 1024, configs.num_label, configs.datapath)
-
-    return train_loader, val_loader
-    
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)
@@ -99,9 +80,9 @@ def create_logger(configs):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(logging.Formatter(head))
-    logger.addHandler(console_handler)
+    #console_handler = logging.StreamHandler(sys.stdout)
+    #console_handler.setFormatter(logging.Formatter(head))
+    #logger.addHandler(console_handler)
 
     logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
     logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
@@ -109,6 +90,7 @@ def create_logger(configs):
     logger.info(f"  large model = {configs.large}")
     logger.info(f"  Batch size  = {configs.batch_size}")
     logger.info(f"  Epoch       = {configs.epochs}")
+    logger.info(f"  Optim       = {configs.optim}")
     logger.info(f"  lambda_u    = {configs.lambda_u}")
     logger.info(f"  alpha       = {configs.alpha}")
     logger.info(f"  T           = {configs.T}")

@@ -1,16 +1,17 @@
 import os
 import time
-import shutil
 import random
 import torch
 import numpy as np
 from model import *
 from loss import MixMatchLoss
 from config import *
-from tensorboardX import SummaryWriter
 from utils import *
 from tqdm import tqdm
 import data_loader.transform as T
+import torch.utils.data as data
+from data_loader.loader import get_cifar10
+import torch.backends.cudnn as cudnn
 
 def train_one_epoch(epoch,
                     model,
@@ -19,6 +20,7 @@ def train_one_epoch(epoch,
                     lr_schdlr,
                     ema_optimizer,
                     train_loader,
+                    u_train_loader,
                     n_iters,
                     ):
 
@@ -28,15 +30,18 @@ def train_one_epoch(epoch,
     loss_meter = AverageMeter()
     loss_x_meter = AverageMeter()
     loss_u_meter = AverageMeter()
-
     tq = tqdm(range(n_iters), total = n_iters, leave=True)
     for it in tq:
         try:
-            x, u_x, y, _ = train_loader.next()
+            x, y = train_loader_iter.next()
         except:
-            train_loader = iter(train_loader)
-            x, u_x, y, _ = train_loader.next()
-        
+            train_loader_iter  = iter(train_loader)
+            x, y = train_loader_iter.next()
+        try:
+            u_x, _ = u_train_loader.next()
+        except:
+            u_train_loader_iter = iter(u_train_loader)
+            u_x, _  = u_train_loader_iter.next()
         current = epoch + it / n_iters
         input = {'model'    : model, 
                  'u_x'    : u_x, 
@@ -51,7 +56,6 @@ def train_one_epoch(epoch,
         loss.backward()
         optim.step()
         ema_optimizer.step()
-        #ema_model.update_params()
         lr_schdlr.step()
 
         loss_meter.update(loss.item())
@@ -70,13 +74,7 @@ def train_one_epoch(epoch,
     #ema_model.update_buffer()
     return loss_meter.avg, loss_x_meter.avg, loss_u_meter.avg
 
-def evaluate(epoch, model, dataloader, criterion, device, ema=False):
-    if ema:
-        #model.ema_model.eval()
-        pass
-    else:
-        model.eval()
-
+def evaluate(epoch, model, dataloader, criterion, device):
     loss_meter = AverageMeter()
     top1_meter = AverageMeter()
     top5_meter = AverageMeter()
@@ -94,15 +92,15 @@ def evaluate(epoch, model, dataloader, criterion, device, ema=False):
             top5_meter.update(top5.item())
             tq.set_description("Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format(epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
     logger.info("  [{}] Test Epoch:{}. Top1: {:.4f}. Top5: {:.4f}. Loss: {:.4f}.".format("EVAL", epoch, top1_meter.avg, top5_meter.avg, loss_meter.avg))
-    #model.restore() if ema else None
 
     return top1_meter.avg, top5_meter.avg, loss_meter.avg
   
 def main():
     args = parse_args()
     configs = get_configs(args)
+    cudnn.benchmark = True
     random.seed(configs.seed)
-    np.random.seed
+    np.random.seed(configs.seed)
     torch.manual_seed(configs.seed)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     global logger
@@ -116,6 +114,7 @@ def main():
                 depth=configs.depth, 
                 width=configs.width,
                 large=configs.large).to(device)
+
     for param in ema_model.parameters():
         param.detach_()
 
@@ -126,10 +125,22 @@ def main():
                     configs.K, 
                     configs.num_classes, 
                     device)
+    transform_train = T.Compose([
+        T.RandomPadandCrop(32),
+        T.RandomFlip(),
+        T.ToTensor(),
+    ])
 
-    train_loader, val_loader = get_data(configs)
+    transform_val = T.Compose([
+        T.ToTensor(),
+    ])
+    train_labeled_set, train_unlabeled_set, val_set, test_set = get_cifar10('./data', configs.K, configs.num_label, transform_train=transform_train, transform_val=transform_val)
+    labeled_trainloader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
+    unlabeled_trainloader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
+    val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
+    test_loader = data.DataLoader(test_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
+
     ema_optimizer = WeightEMA(model, ema_model, alpha=configs.ema_alpha)
-
 
     #optim = torch.optim.SGD(model.parameters(), lr=configs.lr, momentum=0.9)#, weight_decay=configs.weight_decay, momentum=0.9, nesterov=True)
     optim = torch.optim.Adam(model.parameters(), lr = configs.lr, weight_decay=configs.weight_decay)
@@ -144,11 +155,6 @@ def main():
     best_acc_ema_val = -1
     best_epoch_ema_val = 0
 
-    best_acc = -1
-    best_epoch = 0
-    best_acc_ema = -1
-    best_epoch_ema = 0
-
     #global num_epochs
     start_epoch = 0 
     CE_loss = nn.CrossEntropyLoss().to(device)
@@ -160,7 +166,8 @@ def main():
         optim=optim,
         lr_schdlr=lr_schdlr,
         ema_optimizer=ema_optimizer,
-        train_loader=train_loader,
+        train_loader=labeled_trainloader,
+        u_train_loader = unlabeled_trainloader,
         n_iters=1024
     )
 
@@ -168,13 +175,18 @@ def main():
     for epoch in range(start_epoch, configs.epochs):
         train_loss, loss_x, loss_u = train_one_epoch(epoch, **train_args)
         top1_val, top5_val, valid_loss_val = evaluate(epoch,  model, val_loader, CE_loss, device)
-        top1_ema_val, top5_ema_val, valid_loss_ema_val = evaluate(epoch, ema_model, val_loader, CE_loss, device, ema=True)
-
+        top1_ema_val, top5_ema_val, valid_loss_ema_val = evaluate(epoch, ema_model, val_loader, CE_loss, device)
+        top1_test, top5_test, valid_loss_test = evaluate(epoch,  model, test_loader, CE_loss, device)
+        top1_ema_test, top5_ema_test, valid_loss_ema_test = evaluate(epoch, ema_model, test_loader, CE_loss, device)
+        
+        # train log
         writer.add_scalars('train_loss', {
             'loss': train_loss,
             'loss_x': loss_x,
             'loss_u': loss_u
         }, epoch)
+
+        # validation log
         writer.add_scalars('val_acc/top1', {
             'top1_val': top1_val,
             'top1_ema_val': top1_ema_val,
@@ -186,6 +198,20 @@ def main():
         writer.add_scalars('val_loss', {
             'loss_val': valid_loss_val,
             'loss_ema_val': valid_loss_ema_val
+        }, epoch)
+
+        # test log
+        writer.add_scalars('test_acc/top1', {
+            'top1_test': top1_test,
+            'top1_ema_test': top1_ema_test,
+        }, epoch)
+        writer.add_scalars('test_acc/top5', {
+            'top5_test': top5_test,
+            'top5_ema_test': top5_ema_test
+        }, epoch)
+        writer.add_scalars('test_loss', {
+            'loss_test': valid_loss_test,
+            'loss_ema_test': valid_loss_ema_test
         }, epoch)
 
 
@@ -217,7 +243,7 @@ def main():
             ckpt_path = os.path.join(out_dir, configs.name + '_e{}.pth'.format(epoch)) if is_best_val else os.path.join(out_dir, configs.name + "_best")
             ema_ckpt_path = os.path.join(out_dir, configs.name + '_ema_e{}.pth'.format(epoch)) if is_best_val else os.path.join(out_dir, configs.name + "_ema_best")
             torch.save(model.state_dict(), ckpt_path)
-            torch.save(ema_model.state_dict(), ema_ckpt_path)    # not ema.model.state_dict()
+            torch.save(ema_model.state_dict(), ema_ckpt_path)
     writer.close()
 if __name__ == '__main__':
     main()

@@ -1,3 +1,3 @@
 from .wideresnet import *
-from .ema import EMA, WeightEMA
+from .ema import WeightEMA
 from .lr_scheduler import WarmupCosineLrScheduler
