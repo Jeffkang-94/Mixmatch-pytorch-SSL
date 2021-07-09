@@ -97,15 +97,15 @@ class CifarMixMatch(Dataset):
             mean, std = (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)
         if self.isTrain:
             self.trans_train = T.Compose([
-                #T.Resize((32, 32)),
-                T.PadandRandomCrop(cropsize=(32, 32)),
+                T.Resize((32, 32)),
+                T.PadandRandomCrop(border=4, cropsize=(32, 32)),
                 T.RandomHorizontalFlip(p=0.5),
                 T.Normalize(mean, std),
                 T.ToTensor(),
             ])
         else:
             self.trans = T.Compose([
-                #T.Resize((32, 32)),
+                T.Resize((32, 32)),
                 T.Normalize(mean, std),
                 T.ToTensor(),
             ])

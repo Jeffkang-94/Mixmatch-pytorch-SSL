@@ -118,9 +118,9 @@ tensorboard --logdir=log/ --bind_all
 
 ## Reference
 
-YU1ut [MixMatch-pytorch](https://github.com/YU1ut/MixMatch-pytorch)
-perrying [realistic-ssl-evaluation-pytorch](https://github.com/perrying/realistic-ssl-evaluation-pytorch)
-google-research [mixmatch](https://github.com/google-research/mixmatch)
+- YU1ut [MixMatch-pytorch](https://github.com/YU1ut/MixMatch-pytorch)  
+- perrying [realistic-ssl-evaluation-pytorch](https://github.com/perrying/realistic-ssl-evaluation-pytorch)  
+- google-research [mixmatch](https://github.com/google-research/mixmatch)  
 
 ```
 @article{berthelot2019mixmatch,

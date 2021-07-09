@@ -1,6 +1,6 @@
 {
     "mode": "train",
-    "name": "Mixmatch_250",
+    "name": "Mixmatch_250_Adam",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,

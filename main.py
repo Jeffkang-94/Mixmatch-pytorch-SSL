@@ -127,15 +127,16 @@ def main():
     ema_model = EMA(model, configs.ema_alpha)
 
     wd_params, non_wd_params = [], []
-    for name, param in model.named_parameters():
-        if 'bn' in name:
-            non_wd_params.append(param)  # bn.weight, bn.bias and classifier.bias
-        else:
-            wd_params.append(param)
-    param_list = [
-        {'params': wd_params}, {'params': non_wd_params, 'weight_decay': 0}]
+    # for name, param in model.named_parameters():
+    #     if 'bn' in name:
+    #         non_wd_params.append(param)  # bn.weight, bn.bias and classifier.bias
+    #     else:
+    #         wd_params.append(param)
+    # param_list = [
+    #     {'params': wd_params}, {'params': non_wd_params, 'weight_decay': 0}]
 
-    optim = torch.optim.SGD(param_list, lr=configs.lr, weight_decay=configs.weight_decay, momentum=0.9, nesterov=True)
+    #optim = torch.optim.SGD(param_list, lr=configs.lr, weight_decay=configs.weight_decay, momentum=0.9, nesterov=True)
+    optim = torch.optim.Adam(model.parameters(), lr = configs.lr, weight_decay=configs.weight_decay)
     lr_schdlr = WarmupCosineLrScheduler(
         optim, max_iter=1024*configs.epochs, warmup_iter=0
     )
