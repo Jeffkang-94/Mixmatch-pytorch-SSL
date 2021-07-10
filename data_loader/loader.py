@@ -13,7 +13,7 @@ class K_Augmentation:
         out = [self.transform(x) for _ in range(self.K)]
         return out
 
-def normalise(x, mean=cifar10_mean, std=cifar10_std):
+def normalize(x, mean=cifar10_mean, std=cifar10_std):
     x, mean, std = [np.array(a, np.float32) for a in (x, mean, std)]
     x -= mean*255
     x *= 1.0/(255*std)
@@ -23,20 +23,21 @@ def transpose(x, source='NHWC', target='NCHW'):
     return x.transpose([source.index(d) for d in target]) 
 
 
-def get_cifar10(root, K, n_labeled,
+def get_trainval_data(root, K, n_labeled,
                  transform_train=None, transform_val=None,
                  download=True):
 
     base_dataset = torchvision.datasets.CIFAR10(root, train=True, download=download)
     train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.targets, int(n_labeled/10))
-
     train_labeled_dataset = CIFAR10_labeled(root, train_labeled_idxs, train=True, transform=transform_train)
     train_unlabeled_dataset = CIFAR10_unlabeled(root, train_unlabeled_idxs, train=True, transform=K_Augmentation(K, transform_train))
     val_dataset = CIFAR10_labeled(root, val_idxs, train=True, transform=transform_val, download=True)
-    test_dataset = CIFAR10_labeled(root, train=False, transform=transform_val, download=True)
-
     print (f"#Labeled: {len(train_labeled_idxs)} #Unlabeled: {len(train_unlabeled_idxs)} #Val: {len(val_idxs)}")
-    return train_labeled_dataset, train_unlabeled_dataset, val_dataset, test_dataset
+    return train_labeled_dataset, train_unlabeled_dataset, val_dataset
+
+def get_test_data(root, transform=None, download=True):
+    test_dataset = CIFAR10_labeled(root, train=False, transform=transform, download=True)
+    return test_dataset
     
 
 def train_val_split(labels, n_labeled_per_class):
@@ -68,7 +69,7 @@ class CIFAR10_labeled(torchvision.datasets.CIFAR10):
         if indexs is not None:
             self.data = self.data[indexs]
             self.targets = np.array(self.targets)[indexs]
-        self.data = transpose(normalise(self.data))
+        self.data = transpose(normalize(self.data))
 
     def __getitem__(self, index):
         """
@@ -87,7 +88,10 @@ class CIFAR10_labeled(torchvision.datasets.CIFAR10):
             target = self.target_transform(target)
 
         return img, target
-    
+
+    def __len__(self):
+        leng = len(self.data)
+        return leng
 
 class CIFAR10_unlabeled(CIFAR10_labeled):
 
@@ -98,4 +102,4 @@ class CIFAR10_unlabeled(CIFAR10_labeled):
                  transform=transform, target_transform=target_transform,
                  download=download)
         self.targets = np.array([-1 for _ in range(len(self.targets))])
-        
+

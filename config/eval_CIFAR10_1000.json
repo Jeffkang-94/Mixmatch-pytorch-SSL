@@ -1,0 +1,14 @@
+{
+    "mode": "eval",
+    "name": "Mixmatch_1000",
+    "dataset": "CIFAR10",
+    "datapath":"./data",
+    "depth":28,
+    "width":2,
+    "large":false, 
+    "num_classes":10,
+    "num_label":250,
+    "batch_size":64,
+    "resume": false,
+    "ckpt": "latest.pth"
+}

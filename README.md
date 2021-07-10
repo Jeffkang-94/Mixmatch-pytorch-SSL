@@ -4,8 +4,7 @@
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
 
 - [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
-- [ ] Applying log softmax on unlabeled data and compare the results
-- [ ] Evaluation code
+- [X] *2021-07-11*Evaluation code
 - [ ] Supporting other datasets
 - [ ] Upload Pre-trained model and Experimental results
 - [ ] Trouble shooting
@@ -26,8 +25,8 @@ tensorboardX > 2.0
 You have to specify the datapath using symbolic link or directly download the corresponding dataset under the `data` folder.
 
 ```bash
-> mkdir data  
-> ln -s ${datapath} data
+ mkdir data  
+ ln -s ${datapath} data
 ```
 
 
@@ -38,7 +37,14 @@ To train MixMatch model, just follow the below command with a configuration file
 python main.py --cfg_path configs/${config_name}
 ```
 
+If you want to train the model on background, refer to the below command. Plus, we recommend you to use `verbose : false` in the configuration file.
+
+```bash
+nohup python main.py --cfg_path configs/${config_name} &
+```
+
 Training configurations are located under `config` folder. You can tune the each parameter.
+Plus, `experiments` folder includes the shell files to reproduce the results introduced in the paper.
 MixMatch has 4 primary parameter: `lambda_u, alpha, T` and ` K`. (See 3.5 section of [MixMatch](https://arxiv.org/pdf/1905.02249.pdf))
 The original paper fixes the `T` and `K` as `0.5` and `2`, respectively.
 The authors vary the value of `lambda_u` and `alpha` depending on the type of dataset.
@@ -59,18 +65,19 @@ This is an example configuration for CIFAR-10 dataset.
     "num_classes":10,       # Number of class, e.g., CIFAR-10 : 10
     "num_label":250,        # The number of available label [250, 1000, 4000]
     "batch_size":64,        # batch size
-    "epochs":256,           # epoch
+    "epochs":1024,          # epoch
     "save_epoch":10,        # interval of saving checkpoint
     "resume": false,        # resuming the training
+    "ckpt": "latest.pth",   # checkpoint name 
+    "verbose": false,       # If True, print training log on the console
 
     /* Training Configuration */
-    "lr":3e-2,              
+    "lr":0.002,              
     "lambda_u": 75,         
     "alpha":0.75,           
     "T" : 0.5,              # fixed across all experiments, but you can adjust it
     "K" : 2,                # fixed across all experiments, but you can adjust it
     "ema_alpha":0.999,
-    "weight_decay":0.0008,
     "seed":3114             # Different seed yields different result
 }
 ```
@@ -79,6 +86,7 @@ This is an example configuration for CIFAR-10 dataset.
  - `alpha`    : Hyperparameter for the Beta distribution used in MixU
  - `T`        : Temperature parameter for sharpening used in MixMatch
  - `K`        : Number of augmentations used when guessing labels in MixMatch
+ - `seed`     : A number to initialize the random sampling. The results might be changed if you use different seed since it leads to different sampling strategy.
 
 ### Example
 
@@ -91,6 +99,12 @@ Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 /* not supported yet */
 
 ## :link: Experiments
+
+### Evaluation
+
+Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
+
+> python main.py --cfg_path config/eval_CIFAR10_250.json
 
 ### Table
 
@@ -121,6 +135,7 @@ tensorboard --logdir=log/ --bind_all
 - YU1ut [MixMatch-pytorch](https://github.com/YU1ut/MixMatch-pytorch)  
 - perrying [realistic-ssl-evaluation-pytorch](https://github.com/perrying/realistic-ssl-evaluation-pytorch)  
 - google-research [mixmatch](https://github.com/google-research/mixmatch)  
+
 
 ```
 @article{berthelot2019mixmatch,

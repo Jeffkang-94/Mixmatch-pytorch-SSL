@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions.beta import Beta
 import numpy as np
 from utils import *
 
@@ -11,13 +10,13 @@ class MixMatchLoss(nn.Module):
         self.K = K
         self.T = T
         self.lambda_u = lambda_u
-        self.lamda = Beta(alpha, alpha)
+        self.alpha = alpha
         self.num_classes = num_classes
         self.device = device
 
     def sharpen(self, y):
         y = y.pow(1/self.T)
-        return y / y.sum(1,keepdim=True)
+        return y / y.sum(dim=1, keepdim=True)
 
     def linear_rampup(self, current):
         rampup_length = 1024
@@ -55,7 +54,7 @@ class MixMatchLoss(nn.Module):
         all_inputs = torch.cat([x]+u_x, dim=0)
         all_targets = torch.cat([y] +[y_hat]*self.K, dim=0)
 
-        lam = self.lamda.sample().item()
+        lam = np.random.beta(self.alpha, self.alpha)
         lam = max(lam, 1-lam)
         idx = torch.randperm(all_inputs.size(0))
 

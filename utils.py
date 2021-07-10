@@ -80,9 +80,9 @@ def create_logger(configs):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    #console_handler = logging.StreamHandler(sys.stdout)
-    #console_handler.setFormatter(logging.Formatter(head))
-    #logger.addHandler(console_handler)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter(head))
+    logger.addHandler(console_handler)
 
     logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
     logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
