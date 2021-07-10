@@ -137,7 +137,7 @@ class Trainer(BaseModel):
         
 
     def train(self):
-        self.model.train()
+        
         epoch_start = time.time()  # start time
         loss_meter   = AverageMeter()
         loss_x_meter = AverageMeter()
@@ -145,6 +145,7 @@ class Trainer(BaseModel):
         n_iters = 1024
         
         for epoch in range(self.start_epoch, self.configs.epochs):
+            self.model.train()
             if self.configs.verbose:
                 tq = tqdm(range(n_iters), total = n_iters, leave=True)
             else:
