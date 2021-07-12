@@ -13,16 +13,17 @@ class RandomPadandCrop(object):
             is made.
     """
 
-    def __init__(self, output_size):
+    def __init__(self, output_size, border=4):
         assert isinstance(output_size, (int, tuple))
         if isinstance(output_size, int):
             self.output_size = (output_size, output_size)
         else:
             assert len(output_size) == 2
             self.output_size = output_size
+        self.border = border
 
     def __call__(self, x):
-        x = pad(x, 4)
+        x = pad(x, self.border)
 
         h, w = x.shape[1:]
         new_h, new_w = self.output_size

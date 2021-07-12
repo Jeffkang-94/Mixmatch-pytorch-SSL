@@ -23,7 +23,7 @@ class Evaluator(BaseModel):
         transform_val = T.Compose([
             T.ToTensor(),
         ])
-        test_set = get_test_data(self.configs.datapath, transform_val)
+        test_set = get_test_data(self.configs.datapath, self.configs.dataset, transform_val)
         self.test_loader = data.DataLoader(test_set, batch_size=configs.batch_size, shuffle=False, num_workers=0, drop_last=False)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
 

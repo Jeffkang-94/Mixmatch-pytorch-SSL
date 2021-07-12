@@ -4,8 +4,8 @@
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
 
 - [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
-- [X] *2021-07-11*Evaluation code
-- [ ] Supporting other datasets
+- [X] *2021-07-11* Evaluation code
+- [-] Supporting other datasets
 - [ ] Upload Pre-trained model and Experimental results
 - [ ] Trouble shooting
 

@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.utils.data as data
-import data_loader.transform as T
 import numpy as np
 import copy
 import random
@@ -31,19 +30,14 @@ class Trainer(BaseModel):
         else:
             manualSeed = self.configs.seed
             np.random.seed(manualSeed)
+            torch.random.manual_seed(manualSeed)
+            
         self.logger.info("  Total params: {:.2f}M".format(
             sum(p.numel() for p in self.model.parameters()) / 1e6))
         self.logger.info("  Sampling seed : {0}".format(manualSeed))
-
-        transform_train = T.Compose([
-            T.RandomPadandCrop(32),
-            T.RandomFlip(),
-            T.ToTensor(),
-        ])
-        transform_val = T.Compose([
-            T.ToTensor(),
-        ])
-        train_labeled_set, train_unlabeled_set, val_set = get_trainval_data(configs.datapath, configs.dataset, configs.K, configs.num_label, transform_train=transform_train, transform_val=transform_val)
+        transform_train, transform_val = get_transform(configs.dataset)
+        
+        train_labeled_set, train_unlabeled_set, val_set  = get_trainval_data(configs.datapath, configs.dataset, configs.K, configs.num_label, configs.num_classes, transform_train=transform_train, transform_val=transform_val)
         self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
         self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
         self.val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)

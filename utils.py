@@ -2,6 +2,7 @@ import logging
 import os,sys
 import torch
 from tensorboardX import SummaryWriter
+import data_loader.transform as T
 
 class ConfigMapper(object):
     def __init__(self, args):
@@ -28,6 +29,27 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+        
+def get_transform(_dataset):
+    if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
+        transform_train = T.Compose([
+            T.RandomPadandCrop(32),
+            T.RandomFlip(),
+            T.ToTensor(),
+        ])
+        transform_val = T.Compose([
+            T.ToTensor(),
+        ])
+    elif _dataset=='STL10':
+        transform_train = T.Compose([
+            T.RandomPadandCrop(96, border=12),
+            T.RandomFlip(),
+            T.ToTensor(),
+        ])
+        transform_val = T.Compose([
+            T.ToTensor(),
+        ])
+    return transform_train, transform_val
 
 def mixmatch_interleave_offsets(batch, nu):
     groups = [batch // (nu + 1)] * (nu + 1)
