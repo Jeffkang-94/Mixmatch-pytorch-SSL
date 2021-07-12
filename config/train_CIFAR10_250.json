@@ -13,7 +13,7 @@
     "save_epoch":10, 
     "resume": false,
     "ckpt": "latest.pth",
-    "verbose": false,
+    "verbose": true,
 
     "lr":0.002,
     "optim":"ADAM",

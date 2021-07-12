@@ -4,8 +4,8 @@
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
 
 - [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
-- [X] *2021-07-11*Evaluation code
-- [ ] Supporting other datasets
+- [X] *2021-07-11* Evaluation code
+- [*] Supporting other datasets
 - [ ] Upload Pre-trained model and Experimental results
 - [ ] Trouble shooting
 
@@ -23,6 +23,8 @@ tensorboardX > 2.0
 ### Dataset
 
 You have to specify the datapath using symbolic link or directly download the corresponding dataset under the `data` folder.
+`torchvision` will automatically download the corresponding dataset(e.g., [CIFAR-10/100](https://www.cs.toronto.edu/~kriz/cifar.html), [SVHN](http://ufldl.stanford.edu/housenumbers/),[STL10](https://cs.stanford.edu/~acoates/stl10/)) under `data` folder if `download=True`.
+Or you also can directly download the datasets under your datapath and use a symbolic link instead as below.
 
 ```bash
  mkdir data  
@@ -88,23 +90,23 @@ This is an example configuration for CIFAR-10 dataset.
  - `K`        : Number of augmentations used when guessing labels in MixMatch
  - `seed`     : A number to initialize the random sampling. The results might be changed if you use different seed since it leads to different sampling strategy.
 
-### Example
+### Training Example
 
 Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
 > python main.py --cfg_path config/train_CIFAR10_250.json
+
+### Evaluation Example
+
+Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
+
+> python main.py --cfg_path config/eval_CIFAR10_250.json
 
 ## :gift: Pre-training model
 
 /* not supported yet */
 
 ## :link: Experiments
-
-### Evaluation
-
-Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
-
-> python main.py --cfg_path config/eval_CIFAR10_250.json
 
 ### Table
 

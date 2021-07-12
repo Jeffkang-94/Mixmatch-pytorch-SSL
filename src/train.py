@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.utils.data as data
-import data_loader.transform as T
 import numpy as np
 import copy
 import random
@@ -31,33 +30,23 @@ class Trainer(BaseModel):
         else:
             manualSeed = self.configs.seed
             np.random.seed(manualSeed)
+            torch.random.manual_seed(manualSeed)
+            
         self.logger.info("  Total params: {:.2f}M".format(
             sum(p.numel() for p in self.model.parameters()) / 1e6))
         self.logger.info("  Sampling seed : {0}".format(manualSeed))
-
-        transform_train = T.Compose([
-            T.RandomPadandCrop(32),
-            T.RandomFlip(),
-            T.ToTensor(),
-        ])
-        transform_val = T.Compose([
-            T.ToTensor(),
-        ])
-        train_labeled_set, train_unlabeled_set, val_set = get_trainval_data(configs.datapath, configs.K, configs.num_label, transform_train=transform_train, transform_val=transform_val)
+        transform_train, transform_val = get_transform(configs.dataset)
+        
+        train_labeled_set, train_unlabeled_set, val_set  = get_trainval_data(configs.datapath, configs.dataset, configs.K, configs.num_label, configs.num_classes, transform_train=transform_train, transform_val=transform_val)
         self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
         self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
         self.val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
 
-        self.criterion = MixMatchLoss(configs.alpha, 
-                    configs.lambda_u, 
-                    configs.T,
-                    configs.K, 
-                    configs.num_classes, 
-                    self.device)
+        self.criterion = MixMatchLoss(configs, self.device)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
         self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
         self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs * 1024, last_epoch=-1)
-        
+        #self.lr_scheluder   = torch.optim.lr_scheduler.MultiStepLR(optimizer=self.optimizer, step_size=[100, 500], gamma=0.1)
         self.ema_optimizer = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
 
         self.top1_val        = 0 
@@ -163,23 +152,22 @@ class Trainer(BaseModel):
                     u_x, _  = u_train_loader_iter.next()
 
                 # forward inputs
-                current = epoch + it / n_iters
                 input = {'model'    : self.model, 
-                        'u_x'       : u_x, 
-                        'x'         : x, 
-                        'y'         : y,
-                        'current'   : current}
+                         'u_x'      : u_x, 
+                         'x'        : x, 
+                         'y'        : y,
+                         'epoch'    : epoch}
 
                 # compute mixmatch loss
                 loss_x, loss_u, w = self.criterion(input)
-                loss = loss_x + w * loss_u
+                loss = loss_x + loss_u * w
 
                 # update
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
                 self.ema_optimizer.step()
-                self.lr_scheduler.step()
+                #self.lr_scheduler.step()
 
                 # logging
                 loss_meter.update(loss.item())
@@ -188,24 +176,25 @@ class Trainer(BaseModel):
 
                 t = time.time() - epoch_start
                 if self.configs.verbose:
-                    tq.set_description(" Epoch [{}/{}], iter: {}. loss: {:.4f}. loss_x: {:.4f}. loss_u: {:.4f}. lambda_u: {:.4f}. Time: {:.2f}".format(
+                    tq.set_description(" Epoch [{}/{}], iter: {}. loss: {:.4f}. loss_x: {:.4f}. loss_u: {:.4f}.  weight :{:.4f} Time: {:.2f}".format(
                         epoch, self.configs.epochs, it + 1, 
                         loss_meter.avg, 
                         loss_x_meter.avg, 
                         loss_u_meter.avg,
                         w, 
                         t))
-            self.logger.info(" [TRAIN] Epoch [{}/{}], iter: {}. loss: {:.4f}. loss_x: {:.4f}. loss_u: {:.4f}. lambda_u: {:.4f}. Time: {:.2f}".format(
+            self.logger.info(" Epoch [{}/{}], iter: {}. loss: {:.4f}. loss_x: {:.4f}. loss_u: {:.4f}. weight : {:.4f}. Time: {:.2f}".format(
                     epoch, self.configs.epochs, it + 1, 
                     loss_meter.avg, 
                     loss_x_meter.avg, 
                     loss_u_meter.avg,
-                    w, 
+                    w,
                     t))
             self.writer.add_scalars('train_loss', {
                 'loss': loss_meter.avg,
                 'loss_x': loss_x_meter.avg,
                 'loss_u': loss_u_meter.avg,
+                'w'     : w,
             }, epoch)    
             self.evaluate(epoch)
         self._terminate()
