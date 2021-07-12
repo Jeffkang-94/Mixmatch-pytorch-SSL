@@ -1,6 +1,6 @@
 {
     "mode": "train",
-    "name": "Mixmatch_250",
+    "name": "Mixmatch_250_nolrsch_2",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
@@ -13,7 +13,7 @@
     "save_epoch":10, 
     "resume": false,
     "ckpt": "latest.pth",
-    "verbose": false,
+    "verbose": true,
 
     "lr":0.002,
     "optim":"ADAM",
