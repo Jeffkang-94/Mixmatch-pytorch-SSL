@@ -99,22 +99,22 @@ def get_trainval_data(root, dataset, K, n_labeled, num_class,
 
 def get_test_data(root, dataset, transform_val):
     if dataset=='CIFAR10':
-        base_dataset = torchvision.datasets.CIFAR10(root, train=False, download=download)
+        base_dataset = torchvision.datasets.CIFAR10(root, train=False, download=True)
         mean = (0.4914, 0.4822, 0.4465) 
         std  = (0.2471, 0.2435, 0.2616)
         test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val, mean=mean, std=std)
     elif dataset=='CIFAR100':
-        base_dataset = torchvision.datasets.CIFAR100(root, train=True, download=download)
+        base_dataset = torchvision.datasets.CIFAR100(root, train=False, download=True)
         mean = (0.5071, 0.4867, 0.4408)
         std  = (0.2675, 0.2565, 0.2761)
         test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val, mean=mean, std=std)
     elif dataset=='SVHN':
-        base_dataset = torchvision.datasets.SVHN(root, split='train', download=download)
+        base_dataset = torchvision.datasets.SVHN(root, split='test', download=True)
         mean = (0.4377, 0.4438, 0.4728)
         std  = (0.1980, 0.2010, 0.1970)
         raise NotImplementedError
     elif dataset=='STL10':
-        base_dataset = torchvision.datasets.STL10(root, split='train', download=download)
+        base_dataset = torchvision.datasets.STL10(root, split='test', download=True)
         mean = (0.4409, 0.4279, 0.3868)   
         std  = (0.2683, 0.2611, 0.2687)
         raise NotImplementedError

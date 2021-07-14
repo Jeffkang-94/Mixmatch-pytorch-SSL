@@ -31,7 +31,7 @@ class Trainer(BaseModel):
             manualSeed = self.configs.seed
             np.random.seed(manualSeed)
             torch.random.manual_seed(manualSeed)
-            
+
         self.logger.info("  Total params: {:.2f}M".format(
             sum(p.numel() for p in self.model.parameters()) / 1e6))
         self.logger.info("  Sampling seed : {0}".format(manualSeed))
@@ -42,12 +42,11 @@ class Trainer(BaseModel):
         self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
         self.val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
 
-        self.criterion = MixMatchLoss(configs, self.device)
+        self.criterion      = MixMatchLoss(configs, self.device)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
         self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
-        self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs * 1024, last_epoch=-1)
-        #self.lr_scheluder   = torch.optim.lr_scheduler.MultiStepLR(optimizer=self.optimizer, step_size=[100, 500], gamma=0.1)
-        self.ema_optimizer = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
+        self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs, last_epoch=-1)
+        self.ema_optimizer  = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
 
         self.top1_val        = 0 
         self.top1_ema_val    = 0
@@ -116,9 +115,9 @@ class Trainer(BaseModel):
             'loss_ema_val': loss_ema_meter.avg
         }, epoch)
 
-        if self.top1_val < top1_meter.avg:
-            self.top1_val = top1_meter.avg
-            is_best_val = True
+        #if self.top1_val < top1_meter.avg:
+        #    self.top1_val = top1_meter.avg
+        #    is_best_val = True
         if self.top1_ema_val < top1_ema_meter.avg:
             self.top1_ema_val = top1_ema_meter.avg
             is_best_val = True
@@ -167,7 +166,7 @@ class Trainer(BaseModel):
                 loss.backward()
                 self.optimizer.step()
                 self.ema_optimizer.step()
-                #self.lr_scheduler.step()
+                
 
                 # logging
                 loss_meter.update(loss.item())
@@ -194,9 +193,9 @@ class Trainer(BaseModel):
                 'loss': loss_meter.avg,
                 'loss_x': loss_x_meter.avg,
                 'loss_u': loss_u_meter.avg,
-                'w'     : w,
-            }, epoch)    
+            }, epoch)   
             self.evaluate(epoch)
+            self.lr_scheduler.step()
         self._terminate()
         
 

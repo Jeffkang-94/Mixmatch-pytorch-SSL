@@ -1,6 +1,6 @@
 {
     "mode": "train",
-    "name": "Mixmatch_500",
+    "name": "Mixmatch_500_cosinelr",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
@@ -13,7 +13,7 @@
     "save_epoch":10, 
     "resume": false,
     "ckpt": "latest.pth",
-    "verbose": true,
+    "verbose": false,
 
     "lr":0.002,
     "optim":"ADAM",

@@ -106,16 +106,17 @@ def create_logger(configs):
     console_handler.setFormatter(logging.Formatter(head))
     logger.addHandler(console_handler)
 
-    logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
-    logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
-    logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
-    logger.info(f"  large model = {configs.large}")
-    logger.info(f"  Batch size  = {configs.batch_size}")
-    logger.info(f"  Epoch       = {configs.epochs}")
-    logger.info(f"  Optim       = {configs.optim}")
-    logger.info(f"  lambda_u    = {configs.lambda_u}")
-    logger.info(f"  alpha       = {configs.alpha}")
-    logger.info(f"  T           = {configs.T}")
-    logger.info(f"  K           = {configs.K}")
+    if configs.mode =='train':
+        logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
+        logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
+        logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
+        logger.info(f"  large model = {configs.large}")
+        logger.info(f"  Batch size  = {configs.batch_size}")
+        logger.info(f"  Epoch       = {configs.epochs}")
+        logger.info(f"  Optim       = {configs.optim}")
+        logger.info(f"  lambda_u    = {configs.lambda_u}")
+        logger.info(f"  alpha       = {configs.alpha}")
+        logger.info(f"  T           = {configs.T}")
+        logger.info(f"  K           = {configs.K}")
 
     return logger, writer, out_dir

@@ -22,7 +22,7 @@ tensorboardX > 2.0
 
 ### Dataset
 
-You have to specify the datapath using symbolic link or directly download the corresponding dataset under the `data` folder.
+You have to specify the datapath, for example, `data` folder in this codebase.
 `torchvision` will automatically download the corresponding dataset(e.g., [CIFAR-10/100](https://www.cs.toronto.edu/~kriz/cifar.html), [SVHN](http://ufldl.stanford.edu/housenumbers/),[STL10](https://cs.stanford.edu/~acoates/stl10/)) under `data` folder if `download=True`.
 Or you also can directly download the datasets under your datapath and use a symbolic link instead as below.
 

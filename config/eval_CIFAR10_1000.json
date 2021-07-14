@@ -12,14 +12,5 @@
     "epochs":1024,
     "save_epoch":10, 
     "resume": true,
-    "ckpt": "best.pth",
-
-    "lr":0.002,
-    "optim":"ADAM",
-    "lambda_u": 75,
-    "alpha":0.75,
-    "T" : 0.5,
-    "K" : 2,
-    "ema_alpha":0.999,
-    "seed":3114
+    "ckpt": "best.pth"
 }
