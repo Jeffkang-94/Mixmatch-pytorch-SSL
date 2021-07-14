@@ -8,7 +8,7 @@ import time
 
 from data_loader.loader import get_trainval_data
 from src.base import BaseModel
-from loss import MixMatchLoss
+from SSL_loss.mixmatch import MixMatchLoss
 from tqdm import tqdm
 from utils import *
 from model import *
