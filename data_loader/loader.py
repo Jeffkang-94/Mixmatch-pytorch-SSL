@@ -82,9 +82,9 @@ def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
         num_val = 5000 // num_class
 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.targets, n_labeled, num_class, num_val)
-        train_labeled_dataset = CIFAR_labeled(base_dataset.data ,base_dataset.targets, train_labeled_idxs, transform=transform_train, mean=mean, std=std)
-        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K, method, transform_train), mean=mean, std=std)
-        val_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, val_idxs, transform=transform_val, mean=mean, std=std)
+        train_labeled_dataset = CIFAR_labeled(base_dataset.data ,base_dataset.targets, train_labeled_idxs, transform=transform_train)
+        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K, method, transform_train))
+        val_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, val_idxs, transform=transform_val)
         
 
     elif dataset =='SVHN':
@@ -120,12 +120,12 @@ def get_test_data(root, dataset, transform_val):
         base_dataset = torchvision.datasets.CIFAR10(root, train=False, download=True)
         mean = (0.4914, 0.4822, 0.4465) 
         std  = (0.2471, 0.2435, 0.2616)
-        test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val, mean=mean, std=std)
+        test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val)
     elif dataset=='CIFAR100':
         base_dataset = torchvision.datasets.CIFAR100(root, train=False, download=True)
         mean = (0.5071, 0.4867, 0.4408)
         std  = (0.2675, 0.2565, 0.2761)
-        test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val, mean=mean, std=std)
+        test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val)
     elif dataset=='SVHN':
         base_dataset = torchvision.datasets.SVHN(root, split='test', download=True)
         mean = (0.4377, 0.4438, 0.4728)

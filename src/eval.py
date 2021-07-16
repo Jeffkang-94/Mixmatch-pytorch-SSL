@@ -3,12 +3,11 @@ import copy
 import os
 from model import *
 import torch.utils.data as data
-import data_loader.transform as T
 from data_loader.loader import get_test_data
 from tqdm import tqdm
 from src.base import BaseModel
 from utils import *
-
+import torchvision.transforms as transforms
 class Evaluator(BaseModel):
     def __init__(self, configs):
         BaseModel.__init__(self, configs)
@@ -20,8 +19,8 @@ class Evaluator(BaseModel):
         for param in self.ema_model.parameters():
             param.detach_()
 
-        transform_val = T.Compose([
-            T.ToTensor(),
+        transform_val = transforms.Compose([
+            transforms.ToTensor(),
         ])
         test_set = get_test_data(self.configs.datapath, self.configs.dataset, transform_val)
         self.test_loader = data.DataLoader(test_set, batch_size=configs.batch_size, shuffle=False, num_workers=0, drop_last=False)

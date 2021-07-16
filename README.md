@@ -36,13 +36,13 @@ Or you also can directly download the datasets under your datapath and use a sym
 To train MixMatch model, just follow the below command with a configuration file.
 
 ```bash
-python main.py --cfg_path configs/${config_name}
+python main.py --cfg_path config/${method}/${config_name}
 ```
 
 If you want to train the model on background, refer to the below command. Plus, we recommend you to use `verbose : false` in the configuration file.
 
 ```bash
-nohup python main.py --cfg_path configs/${config_name} &
+nohup python main.py --cfg_path config/${method}/${config_name} &
 ```
 
 Training configurations are located under `config` folder. You can tune the each parameter.
@@ -58,7 +58,8 @@ This is an example configuration for CIFAR-10 dataset.
 ```python
 {
     "mode": "train",        # mode [train/eval]
-    "name": "Mixmatch",     # name of trial
+    "method":"Mixmatch",    # type of SSL method [Mixmatch/Fixmatch]
+    "name": "Experiment1",  # name of trial
     "dataset": "CIFAR10",   # dataset [CIFAR10, CIFAR100, STL-10, SVHN]
     "datapath":"./data",    # datapath
     "depth":28,             # ResNet depth
@@ -75,7 +76,8 @@ This is an example configuration for CIFAR-10 dataset.
 
     /* Training Configuration */
     "lr":0.002,              
-    "lambda_u": 75,         
+    "lambda_u": 75,   
+    "optim":"ADAM",         # type of optimizer [Adam, SGD]
     "alpha":0.75,           
     "T" : 0.5,              # fixed across all experiments, but you can adjust it
     "K" : 2,                # fixed across all experiments, but you can adjust it
@@ -113,7 +115,7 @@ Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 **CIFAR-10** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
 #Paper | 88.92±0.87	| 90.35±0.94 | 92.25±0.32 | 92.97±0.15 | 93.76±0.06 | 
-**Repo #Shallow** | 88.53 | 88.60 | 89.53 | 92.45 | 0  | 
+**Repo #Shallow** | 88.53 | 88.60 | 89.53 | 92.45 | 93.27 | 
 
 **SVHN** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|

@@ -3,8 +3,8 @@ from data_loader.SSL_Dataset import SSL_Dataset
 from PIL import Image
 
 class CIFAR_labeled(SSL_Dataset):
-    def __init__(self, data, targets, indexes=None, transform=None, target_transform=None, mean=None, std=None):
-        super(CIFAR_labeled, self).__init__(transform=transform, target_transform=target_transform, mean=mean, std=std)
+    def __init__(self, data, targets, indexes=None, transform=None, target_transform=None):
+        super(CIFAR_labeled, self).__init__(transform=transform, target_transform=target_transform)
         self.data = data
         self.targets = targets
         if indexes is not None:
