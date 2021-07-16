@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=0 python main.py --cfg_path config/train_CIFAR10_250.json
+CUDA_VISIBLE_DEVICES=1 python main.py --cfg_path config/fixmatch/train_CIFAR10_250.json

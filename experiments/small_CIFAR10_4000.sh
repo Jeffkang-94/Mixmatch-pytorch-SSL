@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python main.py --cfg_path config/mixmatch/train_CIFAR10_4000.json

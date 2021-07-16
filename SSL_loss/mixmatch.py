@@ -54,7 +54,7 @@ class MixMatchLoss(nn.Module):
         x = input['x']
         y = input['y']
         u_x = [x for x in input['u_x']]
-        epoch = input['epoch']
+        current = input['current']
         model = input['model']
         
         # make onehot label
@@ -76,7 +76,7 @@ class MixMatchLoss(nn.Module):
         logits = mixmatch_interleave(logit, self.bt)
         logits_x = logits[0]
         logits_u = torch.cat(logits[1:], dim=0)
-        loss_x, loss_u, w = self.cal_loss(logits_x, mixed_target[:self.bt], logits_u, mixed_target[self.bt:], epoch, self.lambda_u)
+        loss_x, loss_u, w = self.cal_loss(logits_x, mixed_target[:self.bt], logits_u, mixed_target[self.bt:], current, self.lambda_u)
         return loss_x, loss_u, w 
 
         

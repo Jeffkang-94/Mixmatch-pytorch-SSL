@@ -3,8 +3,8 @@ import os,sys
 import torch
 from tensorboardX import SummaryWriter
 import data_loader.transform as T
-from data_loader.randaugment import RandomAugment
-
+from data_loader.randaugment import RandAugmentMC as RandomAugment
+import torchvision.transforms as transforms
 class ConfigMapper(object):
     def __init__(self, args):
         for key in args:
@@ -33,44 +33,62 @@ class AverageMeter(object):
 
 def get_fixmatch_transform(_dataset):
     if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
-        transform_weak = T.Compose([
-            T.RandomPadandCrop(32),
-            T.RandomFlip(),
-            T.ToTensor(),
-        ])
+        weak = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(size=32,
+                                  padding=int(32*0.125),
+                                  padding_mode='reflect'),
+            transforms.ToTensor()])
+        strong = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(size=32,
+                                  padding=int(32*0.125),
+                                  padding_mode='reflect'),
+            RandomAugment(n=2, m=10), # RandomAugmentation
+            transforms.ToTensor()])
         
-        transform_strong = T.Compose([
-            T.RandomPadandCrop(32),
-            T.RandomFlip(),
-            T.ToTensor(),
-            RandomAugment(N=2, M=10)
-        ])
-        transform_val = T.Compose([
-            T.ToTensor(),
+        transform_val = transforms.Compose([
+            transforms.ToTensor(),
         ])
     
-    return transform_weak, transform_strong, transform_val
-
-def get_transform(_dataset):
+    return (weak, strong), transform_val
+mean = (0.4914, 0.4822, 0.4465) 
+std  = (0.2471, 0.2435, 0.2616) 
+def get_mixmatch_transform(_dataset):
     if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
-        transform_train = T.Compose([
-            T.RandomPadandCrop(32),
-            T.RandomFlip(),
-            T.ToTensor(),
+        train_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(size=32,
+                                  padding=int(32*0.125),
+                                  padding_mode='reflect'),
+            transforms.ToTensor(),
+            transforms.Normalize(mean,std)
+            ])
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean,std)
         ])
-        transform_val = T.Compose([
-            T.ToTensor(),
+    elif _dataset =='STL10':
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(96, padding=int(96*0.125), padding_mode='reflect'),
+            transforms.RandomFlip(),
+            transforms.ToTensor(),
         ])
-    elif _dataset=='STL10':
-        transform_train = T.Compose([
-            T.RandomPadandCrop(96, border=12),
-            T.RandomFlip(),
-            T.ToTensor(),
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
         ])
-        transform_val = T.Compose([
-            T.ToTensor(),
-        ])
-    return transform_train, transform_val
+    else:
+        raise NotImplementedError
+
+    return train_transform, test_transform
+
+def get_transform(method, _dataset):
+    if method == 'Mixmatch':
+        return get_mixmatch_transform(_dataset)
+    elif method =='Fixmatch':
+        return get_fixmatch_transform(_dataset)
+    else:
+        raise NotImplementedError
 
 def mixmatch_interleave_offsets(batch, nu):
     groups = [batch // (nu + 1)] * (nu + 1)
@@ -91,6 +109,19 @@ def mixmatch_interleave(xy, batch):
         xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
     return [torch.cat(v, dim=0) for v in xy]
     
+
+def interleave(x, bt):
+    # bt: number of batches of labeled data
+    s = list(x.shape)
+    return torch.reshape(torch.transpose(x.reshape([-1, bt] + s[1:]), 1, 0), [-1] + s[1:])
+
+
+def de_interleave(x, bt):
+    s = list(x.shape)
+    return torch.reshape(torch.transpose(x.reshape([bt, -1] + s[1:]), 1, 0), [-1] + s[1:])
+
+
+
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)
@@ -128,16 +159,30 @@ def create_logger(configs):
     logger.addHandler(console_handler)
 
     if configs.mode =='train':
-        logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
-        logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
-        logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
-        logger.info(f"  large model = {configs.large}")
-        logger.info(f"  Batch size  = {configs.batch_size}")
-        logger.info(f"  Epoch       = {configs.epochs}")
-        logger.info(f"  Optim       = {configs.optim}")
-        logger.info(f"  lambda_u    = {configs.lambda_u}")
-        logger.info(f"  alpha       = {configs.alpha}")
-        logger.info(f"  T           = {configs.T}")
-        logger.info(f"  K           = {configs.K}")
+        if configs.method =='Mixmatch':
+            logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
+            logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
+            logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
+            logger.info(f"  large model = {configs.large}")
+            logger.info(f"  Batch size  = {configs.batch_size}")
+            logger.info(f"  Epoch       = {configs.epochs}")
+            logger.info(f"  Optim       = {configs.optim}")
+            logger.info(f"  lambda_u    = {configs.lambda_u}")
+            logger.info(f"  alpha       = {configs.alpha}")
+            logger.info(f"  T           = {configs.T}")
+            logger.info(f"  K           = {configs.K}")
+        elif configs.method =='Fixmatch':
+            logger.info(f"  Desc        = PyTorch Implementation of FixMatch")
+            logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
+            logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
+            logger.info(f"  large model = {configs.large}")
+            logger.info(f"  Batch size  = {configs.batch_size}")
+            logger.info(f"  Epoch       = {configs.epochs}")
+            logger.info(f"  Optim       = {configs.optim}")
+            logger.info(f"  lambda_u    = {configs.lambda_u}")
+            logger.info(f"  threshold   = {configs.threshold}")
+            logger.info(f"  K           = {configs.K}")
+            logger.info(f"  mu          = {configs.mu}")
+
 
     return logger, writer, out_dir

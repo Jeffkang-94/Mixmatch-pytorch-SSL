@@ -2,16 +2,30 @@ import numpy as np
 import torchvision
 from data_loader.cifar import CIFAR_labeled, CIFAR_unlabeled
 
-class K_Augmentation:
+class Augmentation:
     def __init__(self, K, transform):
         self.transform = transform
         self.K = K
 
     def __call__(self, x):
+        # Applying stochastic augmentation K times
         out = [self.transform(x) for _ in range(self.K)]
         return out
 
+class Fixmatch_Augmentation:
+    def __init__(self, transform):
+        self.weak_Tranform = transform[0]
+        self.strong_Transform = transform[1]
+
+    def __call__(self, x):
+        #out = [self.weak_Tranform(x), self.strong_Transform(x)]
+        weak_x = self.weak_Tranform(x)
+        strong_x = self.strong_Transform(x)
+        return (weak_x, strong_x)
+
 def train_val_split(labels, n_labeled, num_class, num_val):
+    # depends on the seed, which means the performance 
+    # might be changed if you use different seed value.
     n_labeled_per_class = int(n_labeled/num_class)
     labels = np.array(labels)
     train_labeled_idxs = []
@@ -29,7 +43,8 @@ def train_val_split(labels, n_labeled, num_class, num_val):
     np.random.shuffle(val_idxs)
 
     return train_labeled_idxs, train_unlabeled_idxs, val_idxs
-def get_trainval_data(root, dataset, K, n_labeled, num_class,
+
+def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
                  transform_train=None, transform_val=None,
                  download=True):
     if dataset=='CIFAR10':
@@ -47,7 +62,10 @@ def get_trainval_data(root, dataset, K, n_labeled, num_class,
 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.targets, n_labeled, num_class, num_val)
         train_labeled_dataset = CIFAR_labeled(base_dataset.data ,base_dataset.targets, train_labeled_idxs,  transform=transform_train, mean=mean, std=std)
-        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=K_Augmentation(K, transform_train), mean=mean, std=std)
+        if method == 'Mixmatch':
+            train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K,transform_train), mean=mean, std=std)
+        elif method =='Fixmatch':
+            train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train), mean=mean, std=std)
         val_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, val_idxs, transform=transform_val, mean=mean, std=std)
 
     elif dataset=='CIFAR100':
@@ -65,7 +83,7 @@ def get_trainval_data(root, dataset, K, n_labeled, num_class,
 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.targets, n_labeled, num_class, num_val)
         train_labeled_dataset = CIFAR_labeled(base_dataset.data ,base_dataset.targets, train_labeled_idxs, transform=transform_train, mean=mean, std=std)
-        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=K_Augmentation(K, transform_train), mean=mean, std=std)
+        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K, method, transform_train), mean=mean, std=std)
         val_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, val_idxs, transform=transform_val, mean=mean, std=std)
         
 
