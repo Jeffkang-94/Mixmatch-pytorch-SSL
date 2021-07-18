@@ -3,12 +3,6 @@
 :warning: Unofficial reproduced code for **[MixMatch](https://arxiv.org/pdf/1905.02249.pdf)**.
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
 
-- [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
-- [X] *2021-07-11* Evaluation code
-- [*] Supporting other datasets
-- [ ] Upload Pre-trained model and Experimental results
-- [ ] Trouble shooting
-
 ## :hammer: Setup
 
 ### Dependency
@@ -33,6 +27,7 @@ Or you also can directly download the datasets under your datapath and use a sym
 
 
 ## :rainbow: Training
+
 To train MixMatch model, just follow the below command with a configuration file.
 
 ```bash
@@ -115,7 +110,7 @@ Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 **CIFAR-10** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
 #Paper | 88.92±0.87	| 90.35±0.94 | 92.25±0.32 | 92.97±0.15 | 93.76±0.06 | 
-**Repo #Shallow** | 88.53 | 88.60 | 89.53 | 92.45 | 93.27 | 
+**Repo #Shallow** | 88.53 | 88.60 | 90.72 | 93.10 | 93.27 | 
 
 **SVHN** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|

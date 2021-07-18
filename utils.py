@@ -5,6 +5,7 @@ from tensorboardX import SummaryWriter
 import data_loader.transform as T
 from data_loader.randaugment import RandAugmentMC as RandomAugment
 import torchvision.transforms as transforms
+
 class ConfigMapper(object):
     def __init__(self, args):
         for key in args:
@@ -32,29 +33,44 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 def get_fixmatch_transform(_dataset):
+    mean, std = get_normalize(_dataset)
     if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
         weak = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
                                   padding_mode='reflect'),
-            transforms.ToTensor()])
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
         strong = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
                                   padding_mode='reflect'),
             RandomAugment(n=2, m=10), # RandomAugmentation
-            transforms.ToTensor()])
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
         
         transform_val = transforms.Compose([
             transforms.ToTensor(),
         ])
     
     return (weak, strong), transform_val
-mean = (0.4914, 0.4822, 0.4465) 
-std  = (0.2471, 0.2435, 0.2616) 
+
+def get_normalize(_dataset):
+    if _dataset == 'CIFAR10':
+        return (0.4914, 0.4822, 0.4465),(0.2471, 0.2435, 0.2616)
+    elif _dataset =='CIFAR100':
+        return (0.5071, 0.4867, 0.4408),(0.2675, 0.2565, 0.2761)
+    elif _dataset =='SVHN':
+        return (0.4377, 0.4438, 0.4728), (0.1980, 0.2010, 0.1970)
+    elif _dataset =='STL10':
+        return (0.4409, 0.4279, 0.3868), (0.2683, 0.2611, 0.2687)
+    else:
+        raise NotImplementedError
+
 def get_mixmatch_transform(_dataset):
+    mean, std = get_normalize(_dataset)
     if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
         train_transform = transforms.Compose([
             transforms.RandomHorizontalFlip(),
@@ -73,9 +89,11 @@ def get_mixmatch_transform(_dataset):
             transforms.RandomCrop(96, padding=int(96*0.125), padding_mode='reflect'),
             transforms.RandomFlip(),
             transforms.ToTensor(),
+            transforms.Normalize(mean,std)
         ])
         test_transform = transforms.Compose([
             transforms.ToTensor(),
+            transforms.Normalize(mean,std)
         ])
     else:
         raise NotImplementedError

@@ -59,7 +59,7 @@ class Trainer(BaseModel):
         if configs.optim == 'ADAM':
             self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
         elif configs.optim =='SGD':
-            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True)
+            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True, weight_decay=0.0005)
         self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs, last_epoch=-1)
         self.ema_optimizer  = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
 
