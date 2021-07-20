@@ -5,7 +5,6 @@ from tensorboardX import SummaryWriter
 import data_loader.transform as T
 from data_loader.randaugment import RandAugmentMC as RandomAugment
 import torchvision.transforms as transforms
-
 class ConfigMapper(object):
     def __init__(self, args):
         for key in args:
@@ -53,6 +52,7 @@ def get_fixmatch_transform(_dataset):
         
         transform_val = transforms.Compose([
             transforms.ToTensor(),
+            transforms.Normalize(mean, std)
         ])
     
     return (weak, strong), transform_val
@@ -71,9 +71,21 @@ def get_normalize(_dataset):
 
 def get_mixmatch_transform(_dataset):
     mean, std = get_normalize(_dataset)
-    if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
+    if _dataset=='CIFAR10' or _dataset=='CIFAR100':
         train_transform = transforms.Compose([
             transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(size=32,
+                                  padding=int(32*0.125),
+                                  padding_mode='reflect'),
+            transforms.ToTensor(),
+            transforms.Normalize(mean,std)
+            ])
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean,std)
+        ])
+    elif _dataset == 'SVHN':
+        train_transform = transforms.Compose([
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
                                   padding_mode='reflect'),
@@ -89,11 +101,10 @@ def get_mixmatch_transform(_dataset):
             transforms.RandomCrop(96, padding=int(96*0.125), padding_mode='reflect'),
             transforms.RandomFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(mean,std)
         ])
         test_transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(mean,std)
+            transforms.Normalize(mean, std)
         ])
     else:
         raise NotImplementedError

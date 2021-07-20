@@ -100,9 +100,9 @@ def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.labels, n_labeled, num_class, num_val)
         train_labeled_dataset = SVHN_labeled(base_dataset.data ,base_dataset.labels, train_labeled_idxs, transform=transform_train)
         if method == 'Mixmatch':
-            train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
+            train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
         elif method =='Fixmatch':
-            train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train))
+            train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train))
         val_dataset = SVHN_labeled(base_dataset.data, base_dataset.labels, val_idxs, transform=transform_val)
         
     elif dataset =='STL10':
@@ -128,7 +128,7 @@ def get_test_data(root, dataset, transform_val):
         test_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, None, transform=transform_val)
     elif dataset=='SVHN':
         base_dataset = torchvision.datasets.SVHN(root, split='test', download=True)
-        raise NotImplementedError
+        test_dataset = SVHN_labeled(base_dataset.data, base_dataset.labels, None, transform=transform_val)
     elif dataset=='STL10':
         base_dataset = torchvision.datasets.STL10(root, split='test', download=True)
         raise NotImplementedError

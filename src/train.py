@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 import numpy as np
-import copy
 import random
 import time
 
@@ -22,7 +21,10 @@ class Trainer(BaseModel):
                         width=configs.width,
                         large=configs.large).to(self.device)
         
-        self.ema_model      = copy.deepcopy(self.model).to(self.device)
+        self.ema_model  = WRN(num_classes=configs.num_classes, 
+                        depth=configs.depth, 
+                        width=configs.width,
+                        large=configs.large).to(self.device)
         for param in self.ema_model.parameters():
             param.detach_()
         
@@ -57,9 +59,9 @@ class Trainer(BaseModel):
             self.criterion      = FixMatchLoss(configs, self.device)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
         if configs.optim == 'ADAM':
-            self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
+            self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr, weight_decay = configs.weight_deacy)
         elif configs.optim =='SGD':
-            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True, weight_decay=0.0005)
+            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True)
         self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs, last_epoch=-1)
         self.ema_optimizer  = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
 

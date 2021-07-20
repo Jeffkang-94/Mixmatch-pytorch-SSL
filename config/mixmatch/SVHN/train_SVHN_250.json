@@ -1,8 +1,8 @@
 {
     "mode": "train",
-    "method":"Fixmatch", 
-    "name": "Fixmatch_250_2",
-    "dataset": "CIFAR10",
+    "method":"Mixmatch", 
+    "name": "Mixmatch_250_SVHN",
+    "dataset": "SVHN",
     "datapath":"./data",
     "depth":28,
     "width":2,
@@ -16,13 +16,13 @@
     "ckpt": "latest.pth",
     "verbose": false,
 
-    "lr":0.03,
-    "optim":"SGD",
-    "lambda_u": 1,
+    "lr":0.002,
+    "optim":"ADAM",
+    "lambda_u": 250,
+    "alpha":0.75,
+    "T" : 0.5,
     "K" : 2,
-    "T" : 1,
-    "mu": 7,
-    "threshold":0.95,
+    "weight_deacy": 0.0004,
     "ema_alpha":0.999,
     "seed":2114
 }
