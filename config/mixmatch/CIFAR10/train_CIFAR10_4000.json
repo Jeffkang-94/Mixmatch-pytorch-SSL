@@ -23,5 +23,6 @@
     "T" : 0.5,
     "K" : 2,
     "ema_alpha":0.999,
+    "weight_deacy": 0.0004,
     "seed":3114
 }

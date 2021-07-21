@@ -39,7 +39,6 @@ class BaseModel(ABC):
             except:
                 setattr(self, key, checkpoint[key])
         self.logger.info(f"  Loading Done.. {ckpt_path}")
-        self.logger.info("  top1_val : {:.2f}".format(self.top1_val))
         self.logger.info("  top1_ema_val : {:.2f}".format(self.top1_ema_val))
         self.logger.info("  Training resumes from epoch {0}".format(checkpoint['epoch']))
         return checkpoint['epoch']

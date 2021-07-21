@@ -28,16 +28,17 @@ Or you also can directly download the datasets under your datapath and use a sym
 
 ## :rainbow: Training
 
+We maintain the code with several configuration files.
 To train MixMatch model, just follow the below command with a configuration file.
 
 ```bash
-python main.py --cfg_path config/${method}/${config_name}
+python main.py --cfg_path config/${method}/${dataset}/${config_name}
 ```
 
 If you want to train the model on background, refer to the below command. Plus, we recommend you to use `verbose : false` in the configuration file.
 
 ```bash
-nohup python main.py --cfg_path config/${method}/${config_name} &
+nohup python main.py --cfg_path config/${method}/${dataset}/${config_name} &
 ```
 
 Training configurations are located under `config` folder. You can tune the each parameter.
@@ -77,7 +78,7 @@ This is an example configuration for CIFAR-10 dataset.
     "T" : 0.5,              # fixed across all experiments, but you can adjust it
     "K" : 2,                # fixed across all experiments, but you can adjust it
     "ema_alpha":0.999,
-    "seed":3114             # Different seed yields different result
+    "seed":2114             # Different seed yields different result
 }
 ```
 
@@ -91,18 +92,29 @@ This is an example configuration for CIFAR-10 dataset.
 
 Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
-> python main.py --cfg_path config/train_CIFAR10_250.json
+> python main.py --cfg_path config/mixmatch/CIFAR10/train_CIFAR10_250.json
 
 ### Evaluation Example
 
 Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
-> python main.py --cfg_path config/eval_CIFAR10_250.json
+> python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_250.json
 
 ## :gift: Pre-training model
 
-/* not supported yet */
+We provide the pre-trained model of CIFAR10 dataset. You can easily download the checkpoint files using below commands.
+This shell file will automatically download the files and organize them to the desired path. The default result directory is `results`.
+For those who cannot download the files using shell file, access the [link](https://drive.google.com/drive/folders/1Fjh-9aSvhAVYrxxXkxnrtW5s6yrprjRs?usp=sharing) directly.
+In the case of downloading the file directly, plz modify the `"ckpt": $checkpoint_name` in the configuration file. For instance, `"ckpt": Mixmatch_250.pth`.
 
+```
+bash experiments/download.sh
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_250.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_500.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_1000.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_2000.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_4000.json
+```
 ## :link: Experiments
 
 ### Table

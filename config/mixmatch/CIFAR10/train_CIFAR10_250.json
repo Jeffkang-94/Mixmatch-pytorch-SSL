@@ -1,7 +1,7 @@
 {
     "mode": "train",
     "method":"Mixmatch", 
-    "name": "Mixmatch_250_cosinelr_3",
+    "name": "Mixmatch_250",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
@@ -23,5 +23,6 @@
     "T" : 0.5,
     "K" : 2,
     "ema_alpha":0.999,
+    "weight_deacy": 0.0004,
     "seed":2114
 }

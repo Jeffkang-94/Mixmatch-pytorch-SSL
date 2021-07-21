@@ -73,7 +73,7 @@ def get_mixmatch_transform(_dataset):
     mean, std = get_normalize(_dataset)
     if _dataset=='CIFAR10' or _dataset=='CIFAR100':
         train_transform = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
                                   padding_mode='reflect'),
