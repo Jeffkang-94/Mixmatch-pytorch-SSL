@@ -1,1 +1,0 @@
-CUDA_VISIBLE_DEVICES=1 python main.py --cfg_path config/mixmatch/SVHN/train_SVHN_500.json

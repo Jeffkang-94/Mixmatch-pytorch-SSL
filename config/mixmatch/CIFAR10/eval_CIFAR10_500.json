@@ -1,6 +1,7 @@
 {
     "mode": "eval",
-    "name": "Mixmatch_500_cosinelr_2",
+    "method": "Mixmatch",
+    "name": "Mixmatch_500",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,

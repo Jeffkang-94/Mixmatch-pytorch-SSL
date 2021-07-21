@@ -1,5 +1,6 @@
 {
     "mode": "train",
+    "method": "Mixmatch",
     "name": "Mixmatch_2000",
     "dataset": "CIFAR10",
     "datapath":"./data",

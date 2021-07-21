@@ -53,7 +53,7 @@ class Trainer(BaseModel):
             raise NotImplementedError
         self.val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
 
-        if configs.method=='Mixmatch':
+        if configs.method =='Mixmatch':
             self.criterion      = MixMatchLoss(configs, self.device)
         elif configs.method =='Fixmatch':
             self.criterion      = FixMatchLoss(configs, self.device)
@@ -174,7 +174,7 @@ class Trainer(BaseModel):
                          'u_x'      : u_x, 
                          'x'        : x, 
                          'y'        : y,
-                         'current'    : current}
+                         'current'  : current}
 
                 # compute mixmatch loss
                 loss_x, loss_u, w = self.criterion(input)

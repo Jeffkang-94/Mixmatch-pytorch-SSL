@@ -1,7 +1,7 @@
 {
     "mode": "eval",
     "method": "Mixmatch",
-    "name": "Mixmatch_4000",
+    "name": "Mixmatch_SVHN_4000",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
@@ -13,5 +13,5 @@
     "epochs":1024,
     "save_epoch":10, 
     "resume": true,
-    "ckpt": "best.pth"
+    "ckpt": "latest.pth"
 }

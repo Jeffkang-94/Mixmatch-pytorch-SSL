@@ -65,7 +65,7 @@ class MixMatchLoss(nn.Module):
         with torch.no_grad():
             y_hat = sum([model(k)[0].softmax(1) for k in u_x]) / self.K
             y_hat = self.sharpen(y_hat)
-            y_hat = y_hat.detach()
+            y_hat.detach_()
 
         # mixup
         all_inputs = torch.cat([x]+u_x, dim=0)

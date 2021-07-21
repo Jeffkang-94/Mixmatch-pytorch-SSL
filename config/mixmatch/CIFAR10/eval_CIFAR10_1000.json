@@ -1,5 +1,6 @@
 {
     "mode": "eval",
+    "method": "Mixmatch",
     "name": "Mixmatch_1000",
     "dataset": "CIFAR10",
     "datapath":"./data",

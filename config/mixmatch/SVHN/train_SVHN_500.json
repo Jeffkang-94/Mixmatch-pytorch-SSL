@@ -18,7 +18,7 @@
 
     "lr":0.002,
     "optim":"ADAM",
-    "lambda_u": 250,
+    "lambda_u": 75,
     "alpha":0.75,
     "T" : 0.5,
     "K" : 2,

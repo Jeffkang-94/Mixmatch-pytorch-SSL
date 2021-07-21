@@ -44,7 +44,7 @@ def get_fixmatch_transform(_dataset):
         strong = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
-                                  padding=int(32*0.125),
+                                  padding=2,
                                   padding_mode='reflect'),
             RandomAugment(n=2, m=10), # RandomAugmentation
             transforms.ToTensor(),
@@ -87,7 +87,7 @@ def get_mixmatch_transform(_dataset):
     elif _dataset == 'SVHN':
         train_transform = transforms.Compose([
             transforms.RandomCrop(size=32,
-                                  padding=int(32*0.125),
+                                  padding=2,
                                   padding_mode='reflect'),
             transforms.ToTensor(),
             transforms.Normalize(mean,std)
