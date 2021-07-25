@@ -1,7 +1,7 @@
 {
     "mode": "train",
     "method":"Mixmatch", 
-    "name": "Mixmatch_250_SVHN",
+    "name": "Mixmatch_250_SVHN_4",
     "dataset": "SVHN",
     "datapath":"./data",
     "depth":28,
@@ -9,20 +9,20 @@
     "large":false, 
     "num_classes":10,
     "num_label":250,
-    "batch_size":64,
-    "epochs":1024,
+    "batch_size":128,
+    "epochs":512,
     "save_epoch":10, 
     "resume": false,
-    "ckpt": "latest.pth",
+    "ckpt": "ema_best.pth",
     "verbose": false,
 
     "lr":0.002,
     "optim":"ADAM",
-    "lambda_u": 75,
+    "lambda_u": 250,
     "alpha":0.75,
     "T" : 0.5,
     "K" : 2,
-    "weight_deacy": 0.0004,
+    "weight_decay": 0.02,
     "ema_alpha":0.999,
-    "seed":2114
+    "seed":478
 }

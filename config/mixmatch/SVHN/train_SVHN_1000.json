@@ -16,13 +16,13 @@
     "ckpt": "latest.pth",
     "verbose": false,
 
-    "lr":0.002,
+    "lr":0.0002,
     "optim":"ADAM",
-    "lambda_u": 75,
-    "alpha":0.75,
+    "lambda_u": 250,
+    "alpha":0.5,
     "T" : 0.5,
     "K" : 2,
     "weight_deacy": 0.0004,
     "ema_alpha":0.999,
-    "seed":2114
+    "seed":"None"
 }

@@ -28,12 +28,12 @@ class Trainer(BaseModel):
         for param in self.ema_model.parameters():
             param.detach_()
         
-        if self.configs.seed is None:
+        if self.configs.seed == "None":
             manualSeed = random.randint(1, 10000)
         else:
             manualSeed = self.configs.seed
-            np.random.seed(manualSeed)
-            torch.random.manual_seed(manualSeed)
+        np.random.seed(manualSeed)
+        torch.manual_seed(manualSeed)
 
         self.logger.info("  Total params: {:.2f}M".format(
             sum(p.numel() for p in self.model.parameters()) / 1e6))
@@ -59,11 +59,10 @@ class Trainer(BaseModel):
             self.criterion      = FixMatchLoss(configs, self.device)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
         if configs.optim == 'ADAM':
-            self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr, weight_decay = configs.weight_deacy)
+            self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
         elif configs.optim =='SGD':
             self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True)
-        self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs, last_epoch=-1)
-        self.ema_optimizer  = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
+        self.ema_optimizer  = WeightEMA(self.model, self.ema_model, configs.weight_decay*configs.lr, alpha=configs.ema_alpha)
 
         self.top1_val        = 0 
         self.top1_ema_val    = 0
@@ -89,6 +88,7 @@ class Trainer(BaseModel):
         top5_ema_meter = AverageMeter()
         
         is_best_val = False
+        ema_is_best_val = False
         with torch.no_grad():
             if self.configs.verbose:
                 tq = tqdm(self.val_loader, total=self.val_loader.__len__(), leave=False)
@@ -132,13 +132,13 @@ class Trainer(BaseModel):
             'loss_ema_val': loss_ema_meter.avg
         }, epoch)
 
-        #if self.top1_val < top1_meter.avg:
-        #    self.top1_val = top1_meter.avg
-        #    is_best_val = True
+        if self.top1_val < top1_meter.avg:
+            self.top1_val = top1_meter.avg
+            is_best_val = True
         if self.top1_ema_val < top1_ema_meter.avg:
             self.top1_ema_val = top1_ema_meter.avg
-            is_best_val = True
-        self._save_checkpoint(epoch, is_best_val)
+            ema_is_best_val = True
+        self._save_checkpoint(epoch, is_best_val, ema_is_best_val)
         
 
     def train(self):
@@ -169,6 +169,7 @@ class Trainer(BaseModel):
                     u_x, _  = u_train_loader_iter.next()
 
                 # forward inputs
+                
                 current = epoch + it / n_iters
                 input = {'model'    : self.model, 
                          'u_x'      : u_x, 
@@ -214,7 +215,6 @@ class Trainer(BaseModel):
                 'loss_u': loss_u_meter.avg,
             }, epoch)   
             self.evaluate(epoch)
-            self.lr_scheduler.step()
         self._terminate()
         
 

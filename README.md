@@ -100,7 +100,7 @@ Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
 > python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_250.json
 
-## :gift: Pre-training model
+## :gift: Pre-trained model
 
 We provide the pre-trained model of CIFAR10 dataset. You can easily download the checkpoint files using below commands.
 This shell file will automatically download the files and organize them to the desired path. The default result directory is `results`.
