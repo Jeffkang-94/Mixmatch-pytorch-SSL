@@ -37,11 +37,15 @@ def train_val_split(labels, n_labeled, num_class, num_val):
         idxs = np.where(labels == i)[0]
         np.random.shuffle(idxs)
         train_labeled_idxs.extend(idxs[:n_labeled_per_class])
-        train_unlabeled_idxs.extend(idxs[n_labeled_per_class:-num_val])
-        val_idxs.extend(idxs[-num_val:])
+        if num_val == 0:
+            train_unlabeled_idxs.extend(idxs[n_labeled_per_class:])
+        else:
+            train_unlabeled_idxs.extend(idxs[n_labeled_per_class:-num_val])
+            val_idxs.extend(idxs[-num_val:])
     np.random.shuffle(train_labeled_idxs)
     np.random.shuffle(train_unlabeled_idxs)
-    np.random.shuffle(val_idxs)
+    if not num_val == 0:
+        np.random.shuffle(val_idxs)
 
     return train_labeled_idxs, train_unlabeled_idxs, val_idxs
 
@@ -96,15 +100,16 @@ def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
         print("Dataset : SVHN")
         base_dataset = torchvision.datasets.SVHN(root, split='train', download=download)
         
-        num_val = 5000 // num_class
+        #num_val = 5000 // num_class
+        num_val = 0 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.labels, n_labeled, num_class, num_val)
         train_labeled_dataset = SVHN_labeled(base_dataset.data ,base_dataset.labels, train_labeled_idxs, transform=transform_train)
         if method == 'Mixmatch':
             train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
         elif method =='Fixmatch':
             train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train))
-        val_dataset = SVHN_labeled(base_dataset.data, base_dataset.labels, val_idxs, transform=transform_val)
-        
+        #val_dataset = SVHN_labeled(base_dataset.data, base_dataset.labels, val_idxs, transform=transform_val)
+        val_dataset = get_test_data(root, dataset, transform_val)
     elif dataset =='STL10':
         """
             TOTAL : 96x96 RGB 113,000 images, 10 classes.
