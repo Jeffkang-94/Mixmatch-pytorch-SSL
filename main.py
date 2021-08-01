@@ -2,7 +2,8 @@ from model import *
 from config import *
 from utils import *
 from src import *
-  
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 def main():
     args = parse_args()
     configs = get_configs(args)

@@ -1,0 +1,28 @@
+{
+    "mode": "train",
+    "method":"Fixmatch", 
+    "name": "Fixmatch_40",
+    "dataset": "CIFAR10",
+    "datapath":"./data",
+    "depth":28,
+    "width":2,
+    "large":false, 
+    "num_classes":10,
+    "num_label":40,
+    "batch_size":16,
+    "epochs":4096,
+    "save_epoch":10, 
+    "resume": false,
+    "ckpt": "latest.pth",
+    "verbose": false,
+
+    "lr":0.03,
+    "optim":"SGD",
+    "lambda_u": 1,
+    "K" : 2,
+    "T" : 1,
+    "mu": 7,
+    "threshold":0.95,
+    "ema_alpha":0.999,
+    "seed":2114
+}

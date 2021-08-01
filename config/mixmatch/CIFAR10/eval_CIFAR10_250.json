@@ -1,25 +1,17 @@
 {
     "mode": "eval",
-    "name": "Mixmatch_500",
+    "method": "Mixmatch",
+    "name": "Mixmatch_250",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
     "width":2,
     "large":false, 
     "num_classes":10,
-    "num_label":500,
+    "num_label":250,
     "batch_size":64,
     "epochs":1024,
     "save_epoch":10, 
     "resume": true,
-    "ckpt": "latest.pth",
-
-    "lr":0.002,
-    "optim":"ADAM",
-    "lambda_u": 75,
-    "alpha":0.75,
-    "T" : 0.5,
-    "K" : 2,
-    "ema_alpha":0.999,
-    "seed":3114
+    "ckpt": "best.pth"
 }

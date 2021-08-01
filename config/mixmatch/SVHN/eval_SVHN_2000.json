@@ -1,0 +1,17 @@
+{
+    "mode": "eval",
+    "method": "Mixmatch",
+    "name": "Mixmatch_SVHN_2000",
+    "dataset": "CIFAR10",
+    "datapath":"./data",
+    "depth":28,
+    "width":2,
+    "large":false, 
+    "num_classes":10,
+    "num_label":2000,
+    "batch_size":64,
+    "epochs":1024,
+    "save_epoch":10, 
+    "resume": true,
+    "ckpt": "latest.pth"
+}

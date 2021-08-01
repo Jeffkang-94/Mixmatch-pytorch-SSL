@@ -1,5 +1,6 @@
 {
-    "mode": "eval",
+    "mode": "train",
+    "method": "Mixmatch",
     "name": "Mixmatch_1000",
     "dataset": "CIFAR10",
     "datapath":"./data",
@@ -11,8 +12,9 @@
     "batch_size":64,
     "epochs":1024,
     "save_epoch":10, 
-    "resume": true,
-    "ckpt": "best.pth",
+    "resume": false,
+    "ckpt": "latest.pth",
+    "verbose": true,
 
     "lr":0.002,
     "optim":"ADAM",
@@ -21,5 +23,6 @@
     "T" : 0.5,
     "K" : 2,
     "ema_alpha":0.999,
+    "weight_deacy": 0.0004,
     "seed":3114
 }

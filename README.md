@@ -3,12 +3,6 @@
 :warning: Unofficial reproduced code for **[MixMatch](https://arxiv.org/pdf/1905.02249.pdf)**.
 This repository covers a variety of dataset e.g., CIFAR-10, CIFAR-100, STL-10, MiniImageNet, etc.
 
-- [X] *2021-07-08* Implementing Mixmatch using CIFAR-10 dataset.
-- [X] *2021-07-11* Evaluation code
-- [*] Supporting other datasets
-- [ ] Upload Pre-trained model and Experimental results
-- [ ] Trouble shooting
-
 ## :hammer: Setup
 
 ### Dependency
@@ -22,7 +16,7 @@ tensorboardX > 2.0
 
 ### Dataset
 
-You have to specify the datapath using symbolic link or directly download the corresponding dataset under the `data` folder.
+You have to specify the datapath, for example, `data` folder in this codebase.
 `torchvision` will automatically download the corresponding dataset(e.g., [CIFAR-10/100](https://www.cs.toronto.edu/~kriz/cifar.html), [SVHN](http://ufldl.stanford.edu/housenumbers/),[STL10](https://cs.stanford.edu/~acoates/stl10/)) under `data` folder if `download=True`.
 Or you also can directly download the datasets under your datapath and use a symbolic link instead as below.
 
@@ -33,16 +27,18 @@ Or you also can directly download the datasets under your datapath and use a sym
 
 
 ## :rainbow: Training
+
+We maintain the code with several configuration files.
 To train MixMatch model, just follow the below command with a configuration file.
 
 ```bash
-python main.py --cfg_path configs/${config_name}
+python main.py --cfg_path config/${method}/${dataset}/${config_name}
 ```
 
 If you want to train the model on background, refer to the below command. Plus, we recommend you to use `verbose : false` in the configuration file.
 
 ```bash
-nohup python main.py --cfg_path configs/${config_name} &
+nohup python main.py --cfg_path config/${method}/${dataset}/${config_name} &
 ```
 
 Training configurations are located under `config` folder. You can tune the each parameter.
@@ -58,7 +54,8 @@ This is an example configuration for CIFAR-10 dataset.
 ```python
 {
     "mode": "train",        # mode [train/eval]
-    "name": "Mixmatch",     # name of trial
+    "method":"Mixmatch",    # type of SSL method [Mixmatch/Fixmatch]
+    "name": "Experiment1",  # name of trial
     "dataset": "CIFAR10",   # dataset [CIFAR10, CIFAR100, STL-10, SVHN]
     "datapath":"./data",    # datapath
     "depth":28,             # ResNet depth
@@ -75,12 +72,13 @@ This is an example configuration for CIFAR-10 dataset.
 
     /* Training Configuration */
     "lr":0.002,              
-    "lambda_u": 75,         
+    "lambda_u": 75,   
+    "optim":"ADAM",         # type of optimizer [Adam, SGD]
     "alpha":0.75,           
     "T" : 0.5,              # fixed across all experiments, but you can adjust it
     "K" : 2,                # fixed across all experiments, but you can adjust it
     "ema_alpha":0.999,
-    "seed":3114             # Different seed yields different result
+    "seed":2114             # Different seed yields different result
 }
 ```
 
@@ -94,18 +92,29 @@ This is an example configuration for CIFAR-10 dataset.
 
 Training MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
-> python main.py --cfg_path config/train_CIFAR10_250.json
+> python main.py --cfg_path config/mixmatch/CIFAR10/train_CIFAR10_250.json
 
 ### Evaluation Example
 
 Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 
-> python main.py --cfg_path config/eval_CIFAR10_250.json
+> python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_250.json
 
-## :gift: Pre-training model
+## :gift: Pre-trained model
 
-/* not supported yet */
+We provide the pre-trained model of CIFAR10 dataset. You can easily download the checkpoint files using below commands.
+This shell file will automatically download the files and organize them to the desired path. The default result directory is `results`.
+For those who cannot download the files using shell file, access the [link](https://drive.google.com/drive/folders/1Fjh-9aSvhAVYrxxXkxnrtW5s6yrprjRs?usp=sharing) directly.
+In the case of downloading the file directly, plz modify the `"ckpt": $checkpoint_name` in the configuration file. For instance, `"ckpt": Mixmatch_250.pth`.
 
+```
+bash experiments/download.sh
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_250.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_500.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_1000.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_2000.json
+python main.py --cfg_path config/mixmatch/CIFAR10/eval_CIFAR10_4000.json
+```
 ## :link: Experiments
 
 ### Table
@@ -113,14 +122,12 @@ Evaluating MixMatch on WideResNet28x2 using a CIFAR10 with 250 labeled data
 **CIFAR-10** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
 #Paper | 88.92±0.87	| 90.35±0.94 | 92.25±0.32 | 92.97±0.15 | 93.76±0.06 | 
-**Repo #Shallow** | 0 | 0 | 0 | 0 | 0  | 0 | 
-**Repo #Large** | 0 | 0 | 0 | 0 | 0  | 0 | 
+**Repo #Shallow** | 88.53 | 88.60 | 90.72 | 93.10 | 93.27 | 
 
 **SVHN** | 250  | 500 | 1000 | 2000 | 4000 |
 | :-----:| :-----:| :-----:| :-----:| :-----:| :-----:|
 #Paper | 96.22±0.87	| 96.36±0.94 | 96.73±0.32 | 96.96±0.15 | 97.11±0.06 | 
-**Repo #Shallow** | 0 | 0 | 0 | 0 | 0  | 0 | 
-**Repo #Large** | 0 | 0 | 0 | 0 | 0  | 0 | 
+**Repo #Shallow** | 94.10 | 94.27 | 94.52 | 95.11  | 96.08 | 
 
 ### Training log
 

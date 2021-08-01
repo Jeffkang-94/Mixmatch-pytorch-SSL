@@ -2,13 +2,13 @@ import torch
 import torch.distributed as dist
 
 class WeightEMA(object):
-    def __init__(self, model, ema_model, alpha=0.999):
+    def __init__(self, model, ema_model, wd, alpha=0.999):
         self.model = model
         self.ema_model = ema_model
         self.alpha = alpha
         self.params = list(model.state_dict().values())
         self.ema_params = list(ema_model.state_dict().values())
-        self.wd = 0.02 * 0.002
+        self.wd = wd
 
         for param, ema_param in zip(self.params, self.ema_params):
             param.data.copy_(ema_param.data)

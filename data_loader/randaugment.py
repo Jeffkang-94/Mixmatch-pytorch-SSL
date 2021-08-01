@@ -1,336 +1,220 @@
-import cv2
+# code in this file is adpated from
+# https://github.com/ildoonet/pytorch-randaugment/blob/master/RandAugment/augmentations.py
+# https://github.com/google-research/fixmatch/blob/master/third_party/auto_augment/augmentations.py
+# https://github.com/google-research/fixmatch/blob/master/libml/ctaugment.py
+import logging
+import random
+
 import numpy as np
+import PIL
+import PIL.ImageOps
+import PIL.ImageEnhance
+import PIL.ImageDraw
+from PIL import Image
+
+logger = logging.getLogger(__name__)
+
+PARAMETER_MAX = 10
 
 
-## aug functions
-def identity_func(img):
+def AutoContrast(img, **kwarg):
+    return PIL.ImageOps.autocontrast(img)
+
+
+def Brightness(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    return PIL.ImageEnhance.Brightness(img).enhance(v)
+
+
+def Color(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    return PIL.ImageEnhance.Color(img).enhance(v)
+
+
+def Contrast(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    return PIL.ImageEnhance.Contrast(img).enhance(v)
+
+
+def Cutout(img, v, max_v, bias=0):
+    if v == 0:
+        return img
+    v = _float_parameter(v, max_v) + bias
+    v = int(v * min(img.size))
+    return CutoutAbs(img, v)
+
+
+def CutoutAbs(img, v, **kwarg):
+    w, h = img.size
+    x0 = np.random.uniform(0, w)
+    y0 = np.random.uniform(0, h)
+    x0 = int(max(0, x0 - v / 2.))
+    y0 = int(max(0, y0 - v / 2.))
+    x1 = int(min(w, x0 + v))
+    y1 = int(min(h, y0 + v))
+    xy = (x0, y0, x1, y1)
+    # gray
+    color = (127, 127, 127)
+    img = img.copy()
+    PIL.ImageDraw.Draw(img).rectangle(xy, color)
     return img
 
 
-def autocontrast_func(img, cutoff=0):
-    '''
-        same output as PIL.ImageOps.autocontrast
-    '''
-    n_bins = 256
-
-    def tune_channel(ch):
-        n = ch.size
-        cut = cutoff * n // 100
-        if cut == 0:
-            high, low = ch.max(), ch.min()
-        else:
-            hist = cv2.calcHist([ch], [0], None, [n_bins], [0, n_bins])
-            low = np.argwhere(np.cumsum(hist) > cut)
-            low = 0 if low.shape[0] == 0 else low[0]
-            high = np.argwhere(np.cumsum(hist[::-1]) > cut)
-            high = n_bins - 1 if high.shape[0] == 0 else n_bins - 1 - high[0]
-        if high <= low:
-            table = np.arange(n_bins)
-        else:
-            scale = (n_bins - 1) / (high - low)
-            offset = -low * scale
-            table = np.arange(n_bins) * scale + offset
-            table[table < 0] = 0
-            table[table > n_bins - 1] = n_bins - 1
-        table = table.clip(0, 255).astype(np.uint8)
-        return table[ch]
-
-    channels = [tune_channel(ch) for ch in cv2.split(img)]
-    out = cv2.merge(channels)
-    return out
+def Equalize(img, **kwarg):
+    return PIL.ImageOps.equalize(img)
 
 
-def equalize_func(img):
-    '''
-        same output as PIL.ImageOps.equalize
-        PIL's implementation is different from cv2.equalize
-    '''
-    n_bins = 256
-
-    def tune_channel(ch):
-        hist = cv2.calcHist([ch], [0], None, [n_bins], [0, n_bins])
-        non_zero_hist = hist[hist != 0].reshape(-1)
-        step = np.sum(non_zero_hist[:-1]) // (n_bins - 1)
-        if step == 0: return ch
-        n = np.empty_like(hist)
-        n[0] = step // 2
-        n[1:] = hist[:-1]
-        table = (np.cumsum(n) // step).clip(0, 255).astype(np.uint8)
-        return table[ch]
-
-    channels = [tune_channel(ch) for ch in cv2.split(img)]
-    out = cv2.merge(channels)
-    return out
+def Identity(img, **kwarg):
+    return img
 
 
-def rotate_func(img, degree, fill=(0, 0, 0)):
-    '''
-    like PIL, rotate by degree, not radians
-    '''
-    H, W = img.shape[0], img.shape[1]
-    center = W / 2, H / 2
-    M = cv2.getRotationMatrix2D(center, degree, 1)
-    out = cv2.warpAffine(img, M, (W, H), borderValue=fill)
-    return out
+def Invert(img, **kwarg):
+    return PIL.ImageOps.invert(img)
 
 
-def solarize_func(img, thresh=128):
-    '''
-        same output as PIL.ImageOps.posterize
-    '''
-    table = np.array([el if el < thresh else 255 - el for el in range(256)])
-    table = table.clip(0, 255).astype(np.uint8)
-    out = table[img]
-    return out
+def Posterize(img, v, max_v, bias=0):
+    v = _int_parameter(v, max_v) + bias
+    return PIL.ImageOps.posterize(img, v)
 
 
-def color_func(img, factor):
-    '''
-        same output as PIL.ImageEnhance.Color
-    '''
-    M = (
-            np.float32([
-                [0.886, -0.114, -0.114],
-                [-0.587, 0.413, -0.587],
-                [-0.299, -0.299, 0.701]]) * factor
-            + np.float32([[0.114], [0.587], [0.299]])
-    )
-    out = np.matmul(img, M).clip(0, 255).astype(np.uint8)
-    return out
+def Rotate(img, v, max_v, bias=0):
+    v = _int_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    return img.rotate(v)
 
 
-def contrast_func(img, factor):
-    """
-        same output as PIL.ImageEnhance.Contrast
-    """
-    mean = np.sum(np.mean(img, axis=(0, 1)) * np.array([0.114, 0.587, 0.299]))
-    table = np.array([(
-        el - mean) * factor + mean
-        for el in range(256)
-    ]).clip(0, 255).astype(np.uint8)
-    out = table[img]
-    return out
+def Sharpness(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    return PIL.ImageEnhance.Sharpness(img).enhance(v)
 
 
-def brightness_func(img, factor):
-    '''
-        same output as PIL.ImageEnhance.Contrast
-    '''
-    table = (np.arange(256, dtype=np.float32) * factor).clip(0, 255).astype(np.uint8)
-    out = table[img]
-    return out
+def ShearX(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0))
 
 
-def sharpness_func(img, factor):
-    '''
-    The differences the this result and PIL are all on the 4 boundaries, the center
-    areas are same
-    '''
-    kernel = np.ones((3, 3), dtype=np.float32)
-    kernel[1][1] = 5
-    kernel /= 13
-    degenerate = cv2.filter2D(img, -1, kernel)
-    if factor == 0.0:
-        out = degenerate
-    elif factor == 1.0:
-        out = img
-    else:
-        out = img.astype(np.float32)
-        degenerate = degenerate.astype(np.float32)[1:-1, 1:-1, :]
-        out[1:-1, 1:-1, :] = degenerate + factor * (out[1:-1, 1:-1, :] - degenerate)
-        out = out.astype(np.uint8)
-    return out
+def ShearY(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0))
 
 
-def shear_x_func(img, factor, fill=(0, 0, 0)):
-    H, W = img.shape[0], img.shape[1]
-    M = np.float32([[1, factor, 0], [0, 1, 0]])
-    out = cv2.warpAffine(img, M, (W, H), borderValue=fill, flags=cv2.INTER_LINEAR).astype(np.uint8)
-    return out
+def Solarize(img, v, max_v, bias=0):
+    v = _int_parameter(v, max_v) + bias
+    return PIL.ImageOps.solarize(img, 256 - v)
 
 
-def translate_x_func(img, offset, fill=(0, 0, 0)):
-    '''
-        same output as PIL.Image.transform
-    '''
-    H, W = img.shape[0], img.shape[1]
-    M = np.float32([[1, 0, -offset], [0, 1, 0]])
-    out = cv2.warpAffine(img, M, (W, H), borderValue=fill, flags=cv2.INTER_LINEAR).astype(np.uint8)
-    return out
+def SolarizeAdd(img, v, max_v, bias=0, threshold=128):
+    v = _int_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    img_np = np.array(img).astype(np.int)
+    img_np = img_np + v
+    img_np = np.clip(img_np, 0, 255)
+    img_np = img_np.astype(np.uint8)
+    img = Image.fromarray(img_np)
+    return PIL.ImageOps.solarize(img, threshold)
 
 
-def translate_y_func(img, offset, fill=(0, 0, 0)):
-    '''
-        same output as PIL.Image.transform
-    '''
-    H, W = img.shape[0], img.shape[1]
-    M = np.float32([[1, 0, 0], [0, 1, -offset]])
-    out = cv2.warpAffine(img, M, (W, H), borderValue=fill, flags=cv2.INTER_LINEAR).astype(np.uint8)
-    return out
+def TranslateX(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    v = int(v * img.size[0])
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
 
 
-def posterize_func(img, bits):
-    '''
-        same output as PIL.ImageOps.posterize
-    '''
-    out = np.bitwise_and(img, np.uint8(255 << (8 - bits)))
-    return out
+def TranslateY(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    v = int(v * img.size[1])
+    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
 
 
-def shear_y_func(img, factor, fill=(0, 0, 0)):
-    H, W = img.shape[0], img.shape[1]
-    M = np.float32([[1, 0, 0], [factor, 1, 0]])
-    out = cv2.warpAffine(img, M, (W, H), borderValue=fill, flags=cv2.INTER_LINEAR).astype(np.uint8)
-    return out
+def _float_parameter(v, max_v):
+    return float(v) * max_v / PARAMETER_MAX
 
 
-def cutout_func(img, pad_size, replace=(0, 0, 0)):
-    replace = np.array(replace, dtype=np.uint8)
-    H, W = img.shape[0], img.shape[1]
-    rh, rw = np.random.random(2)
-    pad_size = pad_size // 2
-    ch, cw = int(rh * H), int(rw * W)
-    x1, x2 = max(ch - pad_size, 0), min(ch + pad_size, H)
-    y1, y2 = max(cw - pad_size, 0), min(cw + pad_size, W)
-    out = img.copy()
-    out[x1:x2, y1:y2, :] = replace
-    return out
+def _int_parameter(v, max_v):
+    return int(v * max_v / PARAMETER_MAX)
 
 
-### level to args
-def enhance_level_to_args(MAX_LEVEL):
-    def level_to_args(level):
-        return ((level / MAX_LEVEL) * 1.8 + 0.1,)
-    return level_to_args
+def fixmatch_augment_pool():
+    # FixMatch paper
+    augs = [(AutoContrast, None, None),
+            (Brightness, 0.9, 0.05),
+            (Color, 0.9, 0.05),
+            (Contrast, 0.9, 0.05),
+            (Equalize, None, None),
+            (Identity, None, None),
+            (Posterize, 4, 4),
+            (Rotate, 30, 0),
+            (Sharpness, 0.9, 0.05),
+            (ShearX, 0.3, 0),
+            (ShearY, 0.3, 0),
+            (Solarize, 256, 0),
+            (TranslateX, 0.3, 0),
+            (TranslateY, 0.3, 0)]
+    return augs
 
 
-def shear_level_to_args(MAX_LEVEL, replace_value):
-    def level_to_args(level):
-        level = (level / MAX_LEVEL) * 0.3
-        if np.random.random() > 0.5: level = -level
-        return (level, replace_value)
-
-    return level_to_args
-
-
-def translate_level_to_args(translate_const, MAX_LEVEL, replace_value):
-    def level_to_args(level):
-        level = (level / MAX_LEVEL) * float(translate_const)
-        if np.random.random() > 0.5: level = -level
-        return (level, replace_value)
-
-    return level_to_args
-
-
-def cutout_level_to_args(cutout_const, MAX_LEVEL, replace_value):
-    def level_to_args(level):
-        level = int((level / MAX_LEVEL) * cutout_const)
-        return (level, replace_value)
-
-    return level_to_args
+def my_augment_pool():
+    # Test
+    augs = [(AutoContrast, None, None),
+            (Brightness, 1.8, 0.1),
+            (Color, 1.8, 0.1),
+            (Contrast, 1.8, 0.1),
+            (Cutout, 0.2, 0),
+            (Equalize, None, None),
+            (Invert, None, None),
+            (Posterize, 4, 4),
+            (Rotate, 30, 0),
+            (Sharpness, 1.8, 0.1),
+            (ShearX, 0.3, 0),
+            (ShearY, 0.3, 0),
+            (Solarize, 256, 0),
+            (SolarizeAdd, 110, 0),
+            (TranslateX, 0.45, 0),
+            (TranslateY, 0.45, 0)]
+    return augs
 
 
-def solarize_level_to_args(MAX_LEVEL):
-    def level_to_args(level):
-        level = int((level / MAX_LEVEL) * 256)
-        return (level, )
-    return level_to_args
-
-
-def none_level_to_args(level):
-    return ()
-
-
-def posterize_level_to_args(MAX_LEVEL):
-    def level_to_args(level):
-        level = int((level / MAX_LEVEL) * 4)
-        return (level, )
-    return level_to_args
-
-
-def rotate_level_to_args(MAX_LEVEL, replace_value):
-    def level_to_args(level):
-        level = (level / MAX_LEVEL) * 30
-        if np.random.random() < 0.5:
-            level = -level
-        return (level, replace_value)
-
-    return level_to_args
-
-
-func_dict = {
-    'Identity': identity_func,
-    'AutoContrast': autocontrast_func,
-    'Equalize': equalize_func,
-    'Rotate': rotate_func,
-    'Solarize': solarize_func,
-    'Color': color_func,
-    'Contrast': contrast_func,
-    'Brightness': brightness_func,
-    'Sharpness': sharpness_func,
-    'ShearX': shear_x_func,
-    'TranslateX': translate_x_func,
-    'TranslateY': translate_y_func,
-    'Posterize': posterize_func,
-    'ShearY': shear_y_func,
-}
-
-translate_const = 10
-MAX_LEVEL = 10
-replace_value = (128, 128, 128)
-arg_dict = {
-    'Identity': none_level_to_args,
-    'AutoContrast': none_level_to_args,
-    'Equalize': none_level_to_args,
-    'Rotate': rotate_level_to_args(MAX_LEVEL, replace_value),
-    'Solarize': solarize_level_to_args(MAX_LEVEL),
-    'Color': enhance_level_to_args(MAX_LEVEL),
-    'Contrast': enhance_level_to_args(MAX_LEVEL),
-    'Brightness': enhance_level_to_args(MAX_LEVEL),
-    'Sharpness': enhance_level_to_args(MAX_LEVEL),
-    'ShearX': shear_level_to_args(MAX_LEVEL, replace_value),
-    'TranslateX': translate_level_to_args(
-        translate_const, MAX_LEVEL, replace_value
-    ),
-    'TranslateY': translate_level_to_args(
-        translate_const, MAX_LEVEL, replace_value
-    ),
-    'Posterize': posterize_level_to_args(MAX_LEVEL),
-    'ShearY': shear_level_to_args(MAX_LEVEL, replace_value),
-}
-
-
-class RandomAugment(object):
-
-    def __init__(self, N=2, M=10, cutoutSize=16):
-        self.N = N
-        self.M = M
-        self.cutoutSize = cutoutSize    # By default, cutoutSize is set to 16 corresponding to CIFAR10, CIFAR100, and SVHN which have image size being 32
-
-    def get_random_ops(self):
-        sampled_ops = np.random.choice(list(func_dict.keys()), self.N)
-        return [(op, 0.5, self.M) for op in sampled_ops]
+class RandAugmentPC(object):
+    def __init__(self, n, m):
+        assert n >= 1
+        assert 1 <= m <= 10
+        self.n = n
+        self.m = m
+        self.augment_pool = my_augment_pool()
 
     def __call__(self, img):
-        ops = self.get_random_ops()
-        for name, prob, level in ops:
-            if np.random.random() > prob:
-                continue
-            args = arg_dict[name](level)
-            img = func_dict[name](img, *args)
-        img = cutout_func(img, self.cutoutSize, replace_value)
+        ops = random.choices(self.augment_pool, k=self.n)
+        for op, max_v, bias in ops:
+            prob = np.random.uniform(0.2, 0.8)
+            if random.random() + prob >= 1:
+                img = op(img, v=self.m, max_v=max_v, bias=bias)
+        img = CutoutAbs(img, int(32*0.5))
         return img
 
 
-class RandomAugmentTest(object):
-
-    def __init__(self, oplist, M=10):
-        self.oplist = oplist
-        self.M = M
+class RandAugmentMC(object):
+    def __init__(self, n, m):
+        assert n >= 1
+        assert 1 <= m <= 10
+        self.n = n
+        self.m = m
+        self.augment_pool = fixmatch_augment_pool()
 
     def __call__(self, img):
-        for name in self.oplist:
-            args = arg_dict[name](self.M)
-            img = func_dict[name](img, *args)
-        img = cutout_func(img, 48, replace_value)
+        ops = random.choices(self.augment_pool, k=self.n)
+        for op, max_v, bias in ops:
+            v = np.random.randint(1, self.m)
+            if random.random() < 0.5:
+                img = op(img, v=v, max_v=max_v, bias=bias)
+        img = CutoutAbs(img, int(32*0.5))
         return img

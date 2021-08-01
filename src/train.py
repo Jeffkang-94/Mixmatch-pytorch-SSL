@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 import numpy as np
-import copy
 import random
 import time
 
 from data_loader.loader import get_trainval_data
 from src.base import BaseModel
-from loss import MixMatchLoss
+from SSL_loss.mixmatch import MixMatchLoss
+from SSL_loss.fixmatch import FixMatchLoss
 from tqdm import tqdm
 from utils import *
 from model import *
@@ -21,33 +21,48 @@ class Trainer(BaseModel):
                         width=configs.width,
                         large=configs.large).to(self.device)
         
-        self.ema_model      = copy.deepcopy(self.model).to(self.device)
+        self.ema_model  = WRN(num_classes=configs.num_classes, 
+                        depth=configs.depth, 
+                        width=configs.width,
+                        large=configs.large).to(self.device)
         for param in self.ema_model.parameters():
             param.detach_()
         
-        if self.configs.seed is None:
+        if self.configs.seed == "None":
             manualSeed = random.randint(1, 10000)
         else:
             manualSeed = self.configs.seed
-            np.random.seed(manualSeed)
-            torch.random.manual_seed(manualSeed)
-            
+        np.random.seed(manualSeed)
+        torch.manual_seed(manualSeed)
+
         self.logger.info("  Total params: {:.2f}M".format(
             sum(p.numel() for p in self.model.parameters()) / 1e6))
         self.logger.info("  Sampling seed : {0}".format(manualSeed))
-        transform_train, transform_val = get_transform(configs.dataset)
+        transform_train, transform_val = get_transform(configs.method, configs.dataset)
         
-        train_labeled_set, train_unlabeled_set, val_set  = get_trainval_data(configs.datapath, configs.dataset, configs.K, configs.num_label, configs.num_classes, transform_train=transform_train, transform_val=transform_val)
-        self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
-        self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
+        train_labeled_set, train_unlabeled_set, val_set  = get_trainval_data(configs.datapath, configs.method, configs.dataset, configs.K, \
+            configs.num_label, configs.num_classes, transform_train=transform_train, transform_val=transform_val)
+        
+        if configs.method=='Mixmatch':
+            self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
+            self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
+        elif configs.method =='Fixmatch':
+            self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
+            self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size*configs.mu, shuffle=True, num_workers=0, drop_last=True)
+        else:
+            raise NotImplementedError
         self.val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
 
-        self.criterion = MixMatchLoss(configs, self.device)
+        if configs.method =='Mixmatch':
+            self.criterion      = MixMatchLoss(configs, self.device)
+        elif configs.method =='Fixmatch':
+            self.criterion      = FixMatchLoss(configs, self.device)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
-        self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
-        self.lr_scheduler   = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=configs.epochs * 1024, last_epoch=-1)
-        #self.lr_scheluder   = torch.optim.lr_scheduler.MultiStepLR(optimizer=self.optimizer, step_size=[100, 500], gamma=0.1)
-        self.ema_optimizer = WeightEMA(self.model, self.ema_model, alpha=configs.ema_alpha)
+        if configs.optim == 'ADAM':
+            self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
+        elif configs.optim =='SGD':
+            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True)
+        self.ema_optimizer  = WeightEMA(self.model, self.ema_model, configs.weight_decay*configs.lr, alpha=configs.ema_alpha)
 
         self.top1_val        = 0 
         self.top1_ema_val    = 0
@@ -73,6 +88,7 @@ class Trainer(BaseModel):
         top5_ema_meter = AverageMeter()
         
         is_best_val = False
+        ema_is_best_val = False
         with torch.no_grad():
             if self.configs.verbose:
                 tq = tqdm(self.val_loader, total=self.val_loader.__len__(), leave=False)
@@ -121,8 +137,8 @@ class Trainer(BaseModel):
             is_best_val = True
         if self.top1_ema_val < top1_ema_meter.avg:
             self.top1_ema_val = top1_ema_meter.avg
-            is_best_val = True
-        self._save_checkpoint(epoch, is_best_val)
+            ema_is_best_val = True
+        self._save_checkpoint(epoch, is_best_val, ema_is_best_val)
         
 
     def train(self):
@@ -132,7 +148,8 @@ class Trainer(BaseModel):
         loss_x_meter = AverageMeter()
         loss_u_meter = AverageMeter()
         n_iters = 1024
-        
+        train_loader_iter  = iter(self.train_loader)
+        u_train_loader_iter = iter(self.u_train_loader)
         for epoch in range(self.start_epoch, self.configs.epochs):
             self.model.train()
             if self.configs.verbose:
@@ -152,11 +169,13 @@ class Trainer(BaseModel):
                     u_x, _  = u_train_loader_iter.next()
 
                 # forward inputs
+                
+                current = epoch + it / n_iters
                 input = {'model'    : self.model, 
                          'u_x'      : u_x, 
                          'x'        : x, 
                          'y'        : y,
-                         'epoch'    : epoch}
+                         'current'  : current}
 
                 # compute mixmatch loss
                 loss_x, loss_u, w = self.criterion(input)
@@ -167,7 +186,7 @@ class Trainer(BaseModel):
                 loss.backward()
                 self.optimizer.step()
                 self.ema_optimizer.step()
-                #self.lr_scheduler.step()
+                
 
                 # logging
                 loss_meter.update(loss.item())
@@ -194,8 +213,7 @@ class Trainer(BaseModel):
                 'loss': loss_meter.avg,
                 'loss_x': loss_x_meter.avg,
                 'loss_u': loss_u_meter.avg,
-                'w'     : w,
-            }, epoch)    
+            }, epoch)   
             self.evaluate(epoch)
         self._terminate()
         

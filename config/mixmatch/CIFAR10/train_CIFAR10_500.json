@@ -1,13 +1,14 @@
 {
     "mode": "train",
-    "name": "Mixmatch_4000",
+    "method": "Mixmatch",
+    "name": "Mixmatch_500",
     "dataset": "CIFAR10",
     "datapath":"./data",
     "depth":28,
     "width":2,
     "large":false, 
     "num_classes":10,
-    "num_label":4000,
+    "num_label":500,
     "batch_size":64,
     "epochs":1024,
     "save_epoch":10, 
@@ -22,5 +23,6 @@
     "T" : 0.5,
     "K" : 2,
     "ema_alpha":0.999,
+    "weight_deacy": 0.0004,
     "seed":3114
 }
