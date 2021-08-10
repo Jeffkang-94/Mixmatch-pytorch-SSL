@@ -50,6 +50,7 @@ class BaseModel(ABC):
         optimizer    = getattr(self, 'optimizer')
         top1_val     = getattr(self, 'top1_val')
         top1_ema_val = getattr(self, 'top1_ema_val')
+        
 
         checkpoint = dict()
         checkpoint['model'] = model.state_dict()

@@ -5,6 +5,8 @@ from tensorboardX import SummaryWriter
 import data_loader.transform as T
 from data_loader.randaugment import RandAugmentMC as RandomAugment
 import torchvision.transforms as transforms
+from torch.optim.lr_scheduler import LambdaLR
+import math
 class ConfigMapper(object):
     def __init__(self, args):
         for key in args:
@@ -31,31 +33,19 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def get_fixmatch_transform(_dataset):
-    mean, std = get_normalize(_dataset)
-    if _dataset=='CIFAR10' or _dataset=='CIFAR100' or _dataset=='SVHN':
-        weak = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomCrop(size=32,
-                                  padding=int(32*0.125),
-                                  padding_mode='reflect'),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)])
-        strong = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomCrop(size=32,
-                                  padding=4,
-                                  padding_mode='reflect'),
-            RandomAugment(n=2, m=10), # RandomAugmentation
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)])
-        
-        transform_val = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-    
-    return (weak, strong), transform_val
+def get_cosine_schedule_with_warmup(optimizer,
+                                    num_warmup_steps,
+                                    num_training_steps,
+                                    num_cycles=7./16.,
+                                    last_epoch=-1):
+    def _lr_lambda(current_step):
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(max(1, num_warmup_steps))
+        no_progress = float(current_step - num_warmup_steps) / \
+            float(max(1, num_training_steps - num_warmup_steps))
+        return max(0., math.cos(math.pi * num_cycles * no_progress))
+
+    return LambdaLR(optimizer, _lr_lambda, last_epoch)
 
 def get_normalize(_dataset):
     if _dataset == 'CIFAR10':
@@ -115,8 +105,6 @@ def get_mixmatch_transform(_dataset):
 def get_transform(method, _dataset):
     if method == 'Mixmatch':
         return get_mixmatch_transform(_dataset)
-    elif method =='Fixmatch':
-        return get_fixmatch_transform(_dataset)
     else:
         raise NotImplementedError
 
@@ -138,18 +126,6 @@ def mixmatch_interleave(xy, batch):
     for i in range(1, nu + 1):
         xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
     return [torch.cat(v, dim=0) for v in xy]
-    
-
-def interleave(x, bt):
-    # bt: number of batches of labeled data
-    s = list(x.shape)
-    return torch.reshape(torch.transpose(x.reshape([-1, bt] + s[1:]), 1, 0), [-1] + s[1:])
-
-
-def de_interleave(x, bt):
-    s = list(x.shape)
-    return torch.reshape(torch.transpose(x.reshape([bt, -1] + s[1:]), 1, 0), [-1] + s[1:])
-
 
 
 def accuracy(output, target, topk=(1,)):
@@ -189,30 +165,15 @@ def create_logger(configs):
     logger.addHandler(console_handler)
 
     if configs.mode =='train':
-        if configs.method =='Mixmatch':
-            logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
-            logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
-            logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
-            logger.info(f"  large model = {configs.large}")
-            logger.info(f"  Batch size  = {configs.batch_size}")
-            logger.info(f"  Epoch       = {configs.epochs}")
-            logger.info(f"  Optim       = {configs.optim}")
-            logger.info(f"  lambda_u    = {configs.lambda_u}")
-            logger.info(f"  alpha       = {configs.alpha}")
-            logger.info(f"  T           = {configs.T}")
-            logger.info(f"  K           = {configs.K}")
-        elif configs.method =='Fixmatch':
-            logger.info(f"  Desc        = PyTorch Implementation of FixMatch")
-            logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
-            logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
-            logger.info(f"  large model = {configs.large}")
-            logger.info(f"  Batch size  = {configs.batch_size}")
-            logger.info(f"  Epoch       = {configs.epochs}")
-            logger.info(f"  Optim       = {configs.optim}")
-            logger.info(f"  lambda_u    = {configs.lambda_u}")
-            logger.info(f"  threshold   = {configs.threshold}")
-            logger.info(f"  K           = {configs.K}")
-            logger.info(f"  mu          = {configs.mu}")
-
-
+        logger.info(f"  Desc        = PyTorch Implementation of MixMatch")
+        logger.info(f"  Task        = {configs.dataset}@{configs.num_label}")
+        logger.info(f"  Model       = WideResNet {configs.depth}x{configs.width}")
+        logger.info(f"  large model = {configs.large}")
+        logger.info(f"  Batch size  = {configs.batch_size}")
+        logger.info(f"  Epoch       = {configs.epochs}")
+        logger.info(f"  Optim       = {configs.optim}")
+        logger.info(f"  lambda_u    = {configs.lambda_u}")
+        logger.info(f"  alpha       = {configs.alpha}")
+        logger.info(f"  T           = {configs.T}")
+        logger.info(f"  K           = {configs.K}")
     return logger, writer, out_dir

@@ -54,7 +54,7 @@ This is an example configuration for CIFAR-10 dataset.
 ```python
 {
     "mode": "train",        # mode [train/eval]
-    "method":"Mixmatch",    # type of SSL method [Mixmatch/Fixmatch]
+    "method":"Mixmatch",    # type of SSL method [Mixmatch]
     "name": "Experiment1",  # name of trial
     "dataset": "CIFAR10",   # dataset [CIFAR10, CIFAR100, STL-10, SVHN]
     "datapath":"./data",    # datapath

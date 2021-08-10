@@ -13,17 +13,6 @@ class Augmentation:
         out = [self.transform(x) for _ in range(self.K)]
         return out
 
-class Fixmatch_Augmentation:
-    def __init__(self, transform):
-        self.weak_Tranform = transform[0]
-        self.strong_Transform = transform[1]
-
-    def __call__(self, x):
-        #out = [self.weak_Tranform(x), self.strong_Transform(x)]
-        weak_x = self.weak_Tranform(x)
-        strong_x = self.strong_Transform(x)
-        return (weak_x, strong_x)
-
 def train_val_split(labels, n_labeled, num_class, num_val):
     # depends on the seed, which means the performance 
     # might be changed if you use different seed value.
@@ -65,10 +54,7 @@ def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.targets, n_labeled, num_class, num_val)
         train_labeled_dataset = CIFAR_labeled(base_dataset.data ,base_dataset.targets, train_labeled_idxs,  transform=transform_train)
-        if method == 'Mixmatch':
-            train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
-        elif method =='Fixmatch':
-            train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train))
+        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
         val_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, val_idxs, transform=transform_val)
 
     elif dataset=='CIFAR100':
@@ -84,10 +70,7 @@ def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.targets, n_labeled, num_class, num_val)
         train_labeled_dataset = CIFAR_labeled(base_dataset.data ,base_dataset.targets, train_labeled_idxs, transform=transform_train)
-        if method == 'Mixmatch':
-            train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
-        elif method =='Fixmatch':
-            train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train))
+        train_unlabeled_dataset = CIFAR_unlabeled(base_dataset.data , base_dataset.targets, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
         val_dataset = CIFAR_labeled(base_dataset.data, base_dataset.targets, val_idxs, transform=transform_val)
         
 
@@ -104,11 +87,7 @@ def get_trainval_data(root, method, dataset, K, n_labeled, num_class,
         num_val = 0 
         train_labeled_idxs, train_unlabeled_idxs, val_idxs = train_val_split(base_dataset.labels, n_labeled, num_class, num_val)
         train_labeled_dataset = SVHN_labeled(base_dataset.data ,base_dataset.labels, train_labeled_idxs, transform=transform_train)
-        if method == 'Mixmatch':
-            train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
-        elif method =='Fixmatch':
-            train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Fixmatch_Augmentation(transform_train))
-        #val_dataset = SVHN_labeled(base_dataset.data, base_dataset.labels, val_idxs, transform=transform_val)
+        train_unlabeled_dataset = SVHN_unlabeled(base_dataset.data , base_dataset.labels, train_unlabeled_idxs, transform=Augmentation(K,transform_train))
         val_dataset = get_test_data(root, dataset, transform_val)
     elif dataset =='STL10':
         """

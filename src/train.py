@@ -8,7 +8,6 @@ import time
 from data_loader.loader import get_trainval_data
 from src.base import BaseModel
 from SSL_loss.mixmatch import MixMatchLoss
-from SSL_loss.fixmatch import FixMatchLoss
 from tqdm import tqdm
 from utils import *
 from model import *
@@ -46,22 +45,16 @@ class Trainer(BaseModel):
         if configs.method=='Mixmatch':
             self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
             self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
-        elif configs.method =='Fixmatch':
-            self.train_loader = data.DataLoader(train_labeled_set, batch_size=configs.batch_size, shuffle=True, num_workers=0, drop_last=True)
-            self.u_train_loader = data.DataLoader(train_unlabeled_set, batch_size=configs.batch_size*configs.mu, shuffle=True, num_workers=0, drop_last=True)
         else:
             raise NotImplementedError
         self.val_loader = data.DataLoader(val_set, batch_size=configs.batch_size, shuffle=False, num_workers=0)
 
-        if configs.method =='Mixmatch':
-            self.criterion      = MixMatchLoss(configs, self.device)
-        elif configs.method =='Fixmatch':
-            self.criterion      = FixMatchLoss(configs, self.device)
+        self.criterion      = MixMatchLoss(configs, self.device)
         self.eval_criterion = nn.CrossEntropyLoss().to(self.device)
         if configs.optim == 'ADAM':
             self.optimizer      = torch.optim.Adam(self.model.parameters(), lr = configs.lr)
         elif configs.optim =='SGD':
-            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True)
+            self.optimizer      = torch.optim.SGD(self.model.parameters(), lr = configs.lr, momentum=0.9, nesterov=True, weight_decay=configs.weight_decay)
         self.ema_optimizer  = WeightEMA(self.model, self.ema_model, configs.weight_decay*configs.lr, alpha=configs.ema_alpha)
 
         self.top1_val        = 0 
